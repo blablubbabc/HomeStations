@@ -1,0 +1,18 @@
+name: HomeStations
+main: de.blablubbabc.homestations.HomeStations
+version: 1.3
+author: blablubbabc
+description: Allows warping between the spawn stations and a home station.
+softdepend: [InSigns, TagAPI, Votifier, Multiverse-Core, My Worlds, Transporter, Multiworld]
+commands:
+    homestations:
+      description: HomeStation commands.
+      aliases: [hs, homestation]
+      usage: /<command> <addSpawn|setMainSpawn>
+permissions:
+    homestation.use:
+        description: Allows a player to use the stations.
+        default: op
+    homestation.admin:
+        description: Allows a player add new spawn stations and set the main spawn station.
+        default: op
