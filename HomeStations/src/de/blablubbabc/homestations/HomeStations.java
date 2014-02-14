@@ -392,6 +392,8 @@ public class HomeStations extends JavaPlugin implements Listener {
 					if (spawnLoc == null) {
 						player.sendMessage(dataStore.getMessage(Message.NoSpawnStationSet));
 						spawnLoc = mainSpawnStation;
+						// only print this message once, then automatically set the players spawn station:
+						playerData.spawnLocation = mainSpawnStation;
 						if (spawnLoc == null) {
 							player.sendMessage(dataStore.getMessage(Message.NoMainSpawnStationSet));
 							return;

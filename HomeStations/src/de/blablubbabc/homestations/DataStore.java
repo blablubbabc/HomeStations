@@ -171,7 +171,7 @@ class DataStore {
 		this.addDefault(defaults, Message.NoHomeStationSet, "&cYou don't have a home station set yet!", null);
 		this.addDefault(defaults, Message.HomeStationNotFound, "&cYour home station does no longer exist!", null);
 		this.addDefault(defaults, Message.SpawnStationSet, "&aYou have set your spawn station! You will teleport here every time you trigger the top button of a home station.", null);
-		this.addDefault(defaults, Message.NoSpawnStationSet, "&cYou don't have a spawn station set yet! Teleporting to main spawn station now.", null);
+		this.addDefault(defaults, Message.NoSpawnStationSet, "&cYou don't have a spawn station set yet! &6Selecting main spawn station now.", null);
 		this.addDefault(defaults, Message.SpawnStationNotFound, "&cYour spawn station does no longer exist!", null);
 		this.addDefault(defaults, Message.ThisIsNoStation, "&cThis is not a valid station!", null);
 		this.addDefault(defaults, Message.NoPermission, "&cYou don't have the permission to do that!", null);
