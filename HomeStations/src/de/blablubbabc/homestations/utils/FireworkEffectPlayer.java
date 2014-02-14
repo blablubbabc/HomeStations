@@ -22,20 +22,20 @@ import org.bukkit.World;
  */
 public class FireworkEffectPlayer {
 
-    /*
-     * Example use:
-     * 
-     * public class FireWorkPlugin implements Listener {
-     * 
-     * FireworkEffectPlayer fplayer = new FireworkEffectPlayer();
-     * 
-     * @EventHandler
-     * public void onPlayerLogin(PlayerLoginEvent event) {
-     *   fplayer.playFirework(event.getPlayer().getWorld(), event.getPlayer.getLocation(), Util.getRandomFireworkEffect());
-     * }
-     * 
-     * }
-     */
+	/*
+	 * Example use:
+	 * 
+	 * public class FireWorkPlugin implements Listener {
+	 * 
+	 * FireworkEffectPlayer fplayer = new FireworkEffectPlayer();
+	 * 
+	 * @EventHandler
+	 * public void onPlayerLogin(PlayerLoginEvent event) {
+	 * fplayer.playFirework(event.getPlayer().getWorld(), event.getPlayer.getLocation(), Util.getRandomFireworkEffect());
+	 * }
+	 * 
+	 * }
+	 */
 
 	// internal references, performance improvements
 	private Method world_getHandle = null;

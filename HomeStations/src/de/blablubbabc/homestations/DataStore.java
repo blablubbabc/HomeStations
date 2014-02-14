@@ -17,7 +17,7 @@ class DataStore {
 	// in-memory cache for messages
 	private String [] messages;
 	
-	// path information, for where stuff stored on disk is well...  stored
+	// path information:
 	final static String dataLayerFolderPath = "plugins" + File.separator + "HomeStations";
 	final static String messagesFilePath = dataLayerFolderPath + File.separator + "messages.yml";
 	final static String homesFilePath = dataLayerFolderPath + File.separator + "homes.yml";
@@ -96,10 +96,13 @@ class DataStore {
 				inStream = new BufferedReader(new FileReader(playerFile.getAbsolutePath()));
 				
 				// first line is the location as string
-				String locationString = inStream.readLine();
+				String homeLocationString = inStream.readLine();
+				// first line is the location as string
+				String spawnLocationString = inStream.readLine();
 				
-				// convert that to SoftBlockLocation and store it
-				playerData.homeLocation = SoftBlockLocation.getFromString(locationString);
+				// convert those to SoftBlockLocations and store them
+				playerData.homeLocation = SoftBlockLocation.getFromString(homeLocationString);
+				playerData.spawnLocation = SoftBlockLocation.getFromString(spawnLocationString);
 				
 				inStream.close();
 			}
@@ -127,8 +130,10 @@ class DataStore {
 			playerDataFile.createNewFile();
 			outStream = new BufferedWriter(new FileWriter(playerDataFile));
 			
-			// first line is the home location
+			// first line is the home location:
 			outStream.write(playerData.homeLocation != null ? playerData.homeLocation.toString() : "not set");
+			// second line is the spawn location:
+			outStream.write(playerData.spawnLocation != null ? playerData.spawnLocation.toString() : "not set");
 			outStream.newLine();
 			
 		} catch (Exception e) {
@@ -161,13 +166,15 @@ class DataStore {
 		// initialize defaults
 		this.addDefault(defaults, Message.SpawnStationAdded, "&aA spawn station was added!", null);
 		this.addDefault(defaults, Message.MainSpawnStationSet, "&aThe main spawn station was set!", null);
-		this.addDefault(defaults, Message.HomeStationSet, "&aYou have set your home station!", null);
-		this.addDefault(defaults, Message.HomeStationNotFound, "&cYour home station does no longer exist!", null);
+		this.addDefault(defaults, Message.NoMainSpawnStationSet, "&cThere is no valid main spawn station set yet!", null);
+		this.addDefault(defaults, Message.HomeStationSet, "&aYou have set your home station! You will teleport here every time you trigger the top button of a spawn station.", null);
 		this.addDefault(defaults, Message.NoHomeStationSet, "&cYou don't have a home station set yet!", null);
-		this.addDefault(defaults, Message.NoSpawnStationSet, "&cThere is no valid main station set yet!", null);
-		this.addDefault(defaults, Message.ThisIsNoStation, "&cThis is not a valid home station!", null);
-		this.addDefault(defaults, Message.AlreadyAtHomeStation, "&aYou are already at your home station!", null);
-		this.addDefault(defaults, Message.NoPermission, "&cYou have no permission to do that!", null);
+		this.addDefault(defaults, Message.HomeStationNotFound, "&cYour home station does no longer exist!", null);
+		this.addDefault(defaults, Message.SpawnStationSet, "&aYou have set your spawn station! You will teleport here every time you trigger the top button of a home station.", null);
+		this.addDefault(defaults, Message.NoSpawnStationSet, "&cYou don't have a spawn station set yet! Teleporting to main spawn station now.", null);
+		this.addDefault(defaults, Message.SpawnStationNotFound, "&cYour spawn station does no longer exist!", null);
+		this.addDefault(defaults, Message.ThisIsNoStation, "&cThis is not a valid station!", null);
+		this.addDefault(defaults, Message.NoPermission, "&cYou don't have the permission to do that!", null);
 		
 		//load the message config file
 		FileConfiguration config = YamlConfiguration.loadConfiguration(new File(messagesFilePath));

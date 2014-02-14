@@ -3,11 +3,13 @@ package de.blablubbabc.homestations;
 public enum Message {
 	SpawnStationAdded,
 	MainSpawnStationSet,
+	NoMainSpawnStationSet,
 	HomeStationSet,
-	HomeStationNotFound,
 	NoHomeStationSet,
+	HomeStationNotFound,
+	SpawnStationSet,
 	NoSpawnStationSet,
+	SpawnStationNotFound,
 	ThisIsNoStation,
-	AlreadyAtHomeStation,
 	NoPermission;
 }
