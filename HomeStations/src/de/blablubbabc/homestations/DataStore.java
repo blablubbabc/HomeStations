@@ -132,6 +132,7 @@ class DataStore {
 			
 			// first line is the home location:
 			outStream.write(playerData.homeLocation != null ? playerData.homeLocation.toString() : "not set");
+			outStream.newLine();
 			// second line is the spawn location:
 			outStream.write(playerData.spawnLocation != null ? playerData.spawnLocation.toString() : "not set");
 			outStream.newLine();
