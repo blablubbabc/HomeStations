@@ -47,7 +47,7 @@ class DataStore {
 		{
 			playerData = this.loadPlayerDataFromStorage(playerName);
 			
-			// shove that new player data into the hash map cache
+			// store that new player data into the hash map cache
 			this.playerNameToPlayerDataMap.put(playerName, playerData);
 		}
 		

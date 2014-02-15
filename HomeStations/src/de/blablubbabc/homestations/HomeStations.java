@@ -8,6 +8,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.FireworkEffect;
 import org.bukkit.FireworkEffect.Builder;
@@ -122,7 +123,7 @@ public class HomeStations extends JavaPlugin implements Listener {
 		spawnStations = new HashSet<SoftBlockLocation>(SoftBlockLocation.getFromStringList(homesConfig.getStringList("Homes.Spawn Stations")));
 		mainSpawnStation = SoftBlockLocation.getFromString(homesConfig.getString("Homes.Main Spawn Station"));
 
-		getServer().getScheduler().runTaskLater(this, new Runnable() {
+		Bukkit.getServer().getScheduler().runTaskLater(this, new Runnable() {
 
 			@Override
 			public void run() {
@@ -160,7 +161,18 @@ public class HomeStations extends JavaPlugin implements Listener {
 		fplayer = new FireworkEffectPlayer();
 
 		// player login listener
-		getServer().getPluginManager().registerEvents(this, this);
+		Bukkit.getServer().getPluginManager().registerEvents(this, this);
+		
+		// load data for all online players:
+		for (Player player : Bukkit.getOnlinePlayers()) {
+			// get his player data, forcing it to initialize if we've never seen him before
+			this.dataStore.getPlayerData(player.getName());
+		}
+	}
+	
+	@Override
+	public void onDisable() {
+		instance = null;
 	}
 
 	private FireworkEffect getEffect(ConfigurationSection section) {
@@ -221,10 +233,6 @@ public class HomeStations extends JavaPlugin implements Listener {
 			}
 		}
 		return strings;
-	}
-
-	@Override
-	public void onDisable() {
 	}
 
 	@Override
