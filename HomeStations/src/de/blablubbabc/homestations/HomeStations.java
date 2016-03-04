@@ -392,8 +392,7 @@ public class HomeStations extends JavaPlugin implements Listener {
 						return;
 					}
 
-					teleport(player, player.getLocation(), location, stationFacing);
-
+					this.teleport(player, player.getLocation(), location, stationFacing);
 				} else {
 					// teleport to spawn station:
 					PlayerData playerData = dataStore.getPlayerData(player);
@@ -418,7 +417,7 @@ public class HomeStations extends JavaPlugin implements Listener {
 
 					this.teleport(player, player.getLocation(), location, stationFacing);
 				}
-			} else if (isLowerStationButton(clicked)) {
+			} else if (this.isLowerStationButton(clicked)) {
 				if (!player.hasPermission("homestation.use")) {
 					player.sendMessage(dataStore.getMessage(Message.NoPermission));
 					return;

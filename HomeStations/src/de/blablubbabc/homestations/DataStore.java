@@ -98,10 +98,17 @@ class DataStore {
 
 		if (playerData == null) {
 			// import old player data if found:
-			playerData = this.loadAndRemoveOldPlayerData(player.getName());
+			String playerName = player.getName();
+			playerData = this.loadOldPlayerData(playerName);
 
-			if (playerData == null) {
-				// create fresh default:
+			if (playerData != null) {
+				// save imported player data:
+				this.savePlayerData(playerId, playerData);
+
+				// delete old player data file:
+				this.getOldPlayerDataFile(playerName).delete();
+			} else {
+				// create fresh default player data:
 				playerData = new PlayerData();
 			}
 		}
@@ -240,16 +247,10 @@ class DataStore {
 
 	// HANDLING OF OLD PLAYER DATA
 
-	private PlayerData loadAndRemoveOldPlayerData(String playerName) {
+	private PlayerData loadOldPlayerData(String playerName) {
 		// look for old player data:
 		File oldPlayerDataFile = this.getOldPlayerDataFile(playerName);
-		PlayerData playerData = this.loadPlayerDataIfExist(oldPlayerDataFile);
-
-		if (playerData != null) {
-			// remove old player data file:
-			oldPlayerDataFile.delete();
-		}
-		return playerData;
+		return this.loadPlayerDataIfExist(oldPlayerDataFile);
 	}
 
 	private File getOldPlayerDataFile(String playerName) {
