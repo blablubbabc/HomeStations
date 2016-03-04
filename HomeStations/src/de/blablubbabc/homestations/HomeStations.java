@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
@@ -71,7 +72,7 @@ public class HomeStations extends JavaPlugin implements Listener {
 		Log.init(this);
 
 		// read config
-		FileConfiguration config = getConfig();
+		FileConfiguration config = this.getConfig();
 
 		// effects:
 		ConfigurationSection effect1Section = config.getConfigurationSection("Firework Effect 1");
@@ -113,12 +114,12 @@ public class HomeStations extends JavaPlugin implements Listener {
 		config.set("Downward.Teleport.Y Offset", teleportYOffset);
 
 		// save:
-		saveConfig();
+		this.saveConfig();
 
-		// init DataStore
+		// initialize DataStore:
 		dataStore = new DataStore();
 
-		// load spawn stations locations
+		// load spawn stations locations:
 		homesConfig = YamlConfiguration.loadConfiguration(new File(DataStore.homesFilePath));
 		spawnStations = new HashSet<SoftBlockLocation>(SoftBlockLocation.getFromStringList(homesConfig.getStringList("Homes.Spawn Stations")));
 		mainSpawnStation = SoftBlockLocation.getFromString(homesConfig.getString("Homes.Main Spawn Station"));
@@ -127,7 +128,6 @@ public class HomeStations extends JavaPlugin implements Listener {
 
 			@Override
 			public void run() {
-
 				// validate all spawn stations:
 				Iterator<SoftBlockLocation> spawnLocs = spawnStations.iterator();
 				while (spawnLocs.hasNext()) {
@@ -160,13 +160,13 @@ public class HomeStations extends JavaPlugin implements Listener {
 		// firework player:
 		fplayer = new FireworkEffectPlayer();
 
-		// player login listener
+		// register listeners:
 		Bukkit.getServer().getPluginManager().registerEvents(this, this);
 
 		// load data for all online players:
 		for (Player player : Bukkit.getOnlinePlayers()) {
 			// get his player data, forcing it to initialize if we've never seen him before
-			dataStore.getPlayerData(player.getName());
+			dataStore.getPlayerData(player);
 		}
 	}
 
@@ -175,7 +175,7 @@ public class HomeStations extends JavaPlugin implements Listener {
 		instance = null;
 	}
 
-	private FireworkEffect getEffect(ConfigurationSection section) {
+	private static FireworkEffect getEffect(ConfigurationSection section) {
 		if (section == null) return null;
 		List<Color> colors = getColorList(section.getStringList("Colors"));
 		if (colors.isEmpty()) return null;
@@ -191,7 +191,7 @@ public class HomeStations extends JavaPlugin implements Listener {
 		return builder.build();
 	}
 
-	private void writeEffectSection(ConfigurationSection section, FireworkEffect effect) {
+	private static void writeEffectSection(ConfigurationSection section, FireworkEffect effect) {
 		if (section == null || effect == null) return;
 		section.set("Colors", getStringList(effect.getColors()));
 		section.set("Fade Colors", getStringList(effect.getFadeColors()));
@@ -199,7 +199,7 @@ public class HomeStations extends JavaPlugin implements Listener {
 		section.set("Trail", effect.hasTrail());
 	}
 
-	private List<Color> getColorList(List<String> stringList) {
+	private static List<Color> getColorList(List<String> stringList) {
 		List<Color> colors = new ArrayList<Color>();
 		if (stringList != null) {
 			for (String string : stringList) {
@@ -219,11 +219,11 @@ public class HomeStations extends JavaPlugin implements Listener {
 		return colors;
 	}
 
-	private int getColorInt(int colorInt) {
+	private static int getColorInt(int colorInt) {
 		return Math.max(0, Math.min(255, colorInt));
 	}
 
-	private List<String> getStringList(List<Color> colorList) {
+	private static List<String> getStringList(List<Color> colorList) {
 		List<String> strings = new ArrayList<String>();
 		if (colorList != null) {
 			for (Color color : colorList) {
@@ -251,7 +251,7 @@ public class HomeStations extends JavaPlugin implements Listener {
 		if (args.length == 1) {
 			Location location = player.getLocation();
 			if (args[0].equalsIgnoreCase("setMainSpawn")) {
-				if (!isLowerStationButton(location.getBlock())) {
+				if (!this.isLowerStationButton(location.getBlock())) {
 					player.sendMessage(dataStore.getMessage(Message.ThisIsNoStation));
 					return true;
 				}
@@ -260,10 +260,10 @@ public class HomeStations extends JavaPlugin implements Listener {
 				// once:
 				spawnStations.add(mainSpawnStation);
 				player.sendMessage(dataStore.getMessage(Message.MainSpawnStationSet));
-				saveSpawnStations();
+				this.saveSpawnStations();
 				return true;
 			} else if (args[0].equalsIgnoreCase("addSpawn")) {
-				if (!isLowerStationButton(location.getBlock())) {
+				if (!this.isLowerStationButton(location.getBlock())) {
 					player.sendMessage(dataStore.getMessage(Message.ThisIsNoStation));
 					return true;
 				}
@@ -272,7 +272,7 @@ public class HomeStations extends JavaPlugin implements Listener {
 				spawnStations.add(softLocation);
 
 				player.sendMessage(dataStore.getMessage(Message.SpawnStationAdded));
-				saveSpawnStations();
+				this.saveSpawnStations();
 				return true;
 			}
 		}
@@ -280,11 +280,11 @@ public class HomeStations extends JavaPlugin implements Listener {
 	}
 
 	public boolean isLowerStationButton(Block buttonB) {
-		return getStationFaceForLowerStationButton(buttonB) != null;
+		return this.getStationFaceForLowerStationButton(buttonB) != null;
 	}
 
 	public boolean isHigherStationButton(Block buttonT) {
-		return getStationFaceHigherStationButton(buttonT) != null;
+		return this.getStationFaceHigherStationButton(buttonT) != null;
 	}
 
 	// checks for the location above the emerald block, the lower button. Returns the stations direction, or null if not
@@ -326,7 +326,7 @@ public class HomeStations extends JavaPlugin implements Listener {
 	// checks for the upper station button. Returns the stations direction, or null if not a valid station:
 	public BlockFace getStationFaceHigherStationButton(Block buttonT) {
 		if (buttonT == null) return null;
-		return getStationFaceForLowerStationButton(buttonT.getRelative(BlockFace.DOWN));
+		return this.getStationFaceForLowerStationButton(buttonT.getRelative(BlockFace.DOWN));
 	}
 
 	public void saveSpawnStations() {
@@ -343,17 +343,17 @@ public class HomeStations extends JavaPlugin implements Listener {
 	@EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
 	void onPlayerJoin(PlayerJoinEvent event) {
 		// get his player data, forcing it to initialize if we've never seen him before
-		dataStore.getPlayerData(event.getPlayer().getName());
+		dataStore.getPlayerData(event.getPlayer());
 	}
 
 	// when a player quits...
 	@EventHandler(priority = EventPriority.HIGHEST)
 	void onPlayerQuit(PlayerQuitEvent event) {
 		Player player = event.getPlayer();
-		String playerName = player.getName();
+		UUID playerId = player.getUniqueId();
 
 		// drop player data from memory
-		dataStore.clearCachedPlayerData(playerName);
+		dataStore.clearCachedPlayerData(playerId);
 	}
 
 	// when a player presses a button...
@@ -364,11 +364,10 @@ public class HomeStations extends JavaPlugin implements Listener {
 			if (clicked.getType() != Material.STONE_BUTTON) return;
 
 			Player player = event.getPlayer();
-			String playerName = player.getName();
 
 			if (player.isInsideVehicle()) return;
 
-			if (isHigherStationButton(clicked)) {
+			if (this.isHigherStationButton(clicked)) {
 				if (!player.hasPermission("homestation.use")) {
 					player.sendMessage(dataStore.getMessage(Message.NoPermission));
 					return;
@@ -379,14 +378,14 @@ public class HomeStations extends JavaPlugin implements Listener {
 				// is spawn station?
 				if (spawnStations.contains(currentSoftLocation)) {
 					// teleport to home:
-					PlayerData playerData = dataStore.getPlayerData(playerName);
+					PlayerData playerData = dataStore.getPlayerData(player);
 					SoftBlockLocation homeLoc = playerData.homeLocation;
 					if (homeLoc == null) {
 						player.sendMessage(dataStore.getMessage(Message.NoHomeStationSet));
 						return;
 					}
 					Location location = homeLoc.getBukkitLocation();
-					BlockFace stationFacing = location != null ? getStationFaceForLowerStationButton(location.getBlock()) : null;
+					BlockFace stationFacing = location != null ? this.getStationFaceForLowerStationButton(location.getBlock()) : null;
 
 					if (stationFacing == null) {
 						player.sendMessage(dataStore.getMessage(Message.HomeStationNotFound));
@@ -397,7 +396,7 @@ public class HomeStations extends JavaPlugin implements Listener {
 
 				} else {
 					// teleport to spawn station:
-					PlayerData playerData = dataStore.getPlayerData(playerName);
+					PlayerData playerData = dataStore.getPlayerData(player);
 					SoftBlockLocation spawnLoc = playerData.spawnLocation;
 					if (spawnLoc == null) {
 						player.sendMessage(dataStore.getMessage(Message.NoSpawnStationSet));
@@ -410,21 +409,21 @@ public class HomeStations extends JavaPlugin implements Listener {
 						}
 					}
 					Location location = spawnLoc.getBukkitLocation();
-					BlockFace stationFacing = location != null ? getStationFaceForLowerStationButton(location.getBlock()) : null;
+					BlockFace stationFacing = location != null ? this.getStationFaceForLowerStationButton(location.getBlock()) : null;
 
 					if (stationFacing == null) {
 						player.sendMessage(dataStore.getMessage(Message.SpawnStationNotFound));
 						return;
 					}
 
-					teleport(player, player.getLocation(), location, stationFacing);
+					this.teleport(player, player.getLocation(), location, stationFacing);
 				}
 			} else if (isLowerStationButton(clicked)) {
 				if (!player.hasPermission("homestation.use")) {
 					player.sendMessage(dataStore.getMessage(Message.NoPermission));
 					return;
 				}
-				PlayerData playerData = dataStore.getPlayerData(playerName);
+				PlayerData playerData = dataStore.getPlayerData(player);
 				SoftBlockLocation stationLocation = new SoftBlockLocation(clicked.getLocation());
 				// is spawn station?
 				if (spawnStations.contains(stationLocation)) {
@@ -437,7 +436,7 @@ public class HomeStations extends JavaPlugin implements Listener {
 					player.sendMessage(dataStore.getMessage(Message.HomeStationSet));
 				}
 
-				dataStore.savePlayerData(playerName, playerData);
+				dataStore.savePlayerData(player.getUniqueId(), playerData);
 			}
 		}
 	}

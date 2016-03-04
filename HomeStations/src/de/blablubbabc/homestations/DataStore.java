@@ -9,10 +9,12 @@ import java.io.IOException;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 import org.bukkit.ChatColor;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
 
 import de.blablubbabc.homestations.utils.Log;
 import de.blablubbabc.homestations.utils.SoftBlockLocation;
@@ -26,7 +28,7 @@ class DataStore {
 	final static String playerDataFolderPath = pluginFolderPath + File.separator + "PlayerData";
 
 	// in-memory cache for player data:
-	private final Map<String, PlayerData> playerNameToPlayerDataMap = new HashMap<String, PlayerData>();
+	private final Map<UUID, PlayerData> playerIdToPlayerDataMap = new HashMap<UUID, PlayerData>();
 
 	// in-memory cache for messages:
 	private final Map<Message, String> messages = new EnumMap<Message, String>(Message.class);
@@ -39,108 +41,166 @@ class DataStore {
 		new File(playerDataFolderPath).mkdirs();
 	}
 
-	// removes cached player data from memory
-	@Deprecated
-	void clearCachedPlayerData(String playerName) {
-		playerNameToPlayerDataMap.remove(playerName);
+	/**
+	 * Removes cached {@link PlayerData} from memory.
+	 * 
+	 * @param playerId
+	 *            the player's unique id
+	 */
+	void clearCachedPlayerData(UUID playerId) {
+		playerIdToPlayerDataMap.remove(playerId);
 	}
 
-	// retrieves player data from memory or file, as necessary
-	// if the player has never been on the server before, this will return a fresh player data with default values
-	@Deprecated
-	public PlayerData getPlayerData(String playerName) {
-		// first, look in memory
-		PlayerData playerData = playerNameToPlayerDataMap.get(playerName);
+	/**
+	 * Retrieves {@link PlayerData} from memory or file, as necessary.
+	 * 
+	 * <p>
+	 * If the player has never been on the server before, this will return a fresh {@link PlayerData} with default
+	 * values.
+	 * </p>
+	 * 
+	 * @param player
+	 *            the player
+	 * @return the player data
+	 */
+	public PlayerData getPlayerData(Player player) {
+		UUID playerId = player.getUniqueId();
+		// look in memory:
+		PlayerData playerData = playerIdToPlayerDataMap.get(playerId);
 
-		// if not there, look on disk
-		if (playerData == null)
-		{
-			playerData = this.loadPlayerDataFromStorage(playerName);
-
-			// store that new player data into the hash map cache
-			playerNameToPlayerDataMap.put(playerName, playerData);
-		}
-
-		// try the hash map again. if it's STILL not there, we have a bug to fix
-		return playerNameToPlayerDataMap.get(playerName);
-	}
-
-	// returns PlayerData for a player with the given name and RETURNS NULL if no PlayerData was found for this name.
-	// The loaded playerData will not be saved in memory and is meant for one-time lookup purposes.
-	@Deprecated
-	public PlayerData getPlayerDataIfExist(String playerName) {
-		// first, look in memory
-		PlayerData playerData = playerNameToPlayerDataMap.get(playerName);
-
-		// if not there, look on disk
+		// if not there, look on disk and create default if it doesn't exist there either:
 		if (playerData == null) {
-			playerData = this.loadPlayerDataFromStorageIfExist(playerName);
+			playerData = this.loadPlayerData(player);
+
+			// store the new player data in the cache:
+			playerIdToPlayerDataMap.put(playerId, playerData);
+		}
+		return playerData;
+	}
+
+	/**
+	 * Loads the player data for the given player.
+	 * 
+	 * <p>
+	 * If no player data exists yet, this will try to import the player data from the old player data file.<br>
+	 * If the player has never been on the server before, this will return a fresh {@link PlayerData} with default
+	 * values.
+	 * </p>
+	 * 
+	 * @param player
+	 *            the player
+	 * @return the player data
+	 */
+	private PlayerData loadPlayerData(Player player) {
+		UUID playerId = player.getUniqueId();
+		// load player data from disk:
+		PlayerData playerData = this.loadPlayerDataIfExist(playerId);
+
+		if (playerData == null) {
+			// import old player data if found:
+			playerData = this.loadAndRemoveOldPlayerData(player.getName());
+
+			if (playerData == null) {
+				// create fresh default:
+				playerData = new PlayerData();
+			}
+		}
+		return playerData;
+	}
+
+	/**
+	 * Gets the {@link PlayerData} for a player with the given id.
+	 * 
+	 * <p>
+	 * Returns <code>null</code> if no {@link PlayerData} was found for the given player id.<br>
+	 * The loaded {@link PlayerData} will not be saved in memory and is meant for one-time lookup purposes.
+	 * 
+	 * @param playerId
+	 *            the player id
+	 * @return the player data, possibly <code>null</code>
+	 */
+	public PlayerData getPlayerDataIfExist(UUID playerId) {
+		// look in memory:
+		PlayerData playerData = playerIdToPlayerDataMap.get(playerId);
+
+		// if not there, look on disk:
+		if (playerData == null) {
+			playerData = this.loadPlayerDataIfExist(playerId);
 		}
 
 		return playerData;
 	}
 
-	@Deprecated
-	PlayerData loadPlayerDataFromStorage(String playerName) {
-		PlayerData playerData = loadPlayerDataFromStorageIfExist(playerName);
-
-		// if it doesn't exist, init default:
-		if (playerData == null) {
-			playerData = new PlayerData();
-		}
-
-		return playerData;
+	/**
+	 * Loads the {@link PlayerData} for the given player id.
+	 * 
+	 * <p>
+	 * Returns <code>null</code> if there is no data stored for the given player id.
+	 * </p>
+	 * 
+	 * @param playerId
+	 *            the player id
+	 * @return the player data, possibly <code>null</code>
+	 */
+	PlayerData loadPlayerDataIfExist(UUID playerId) {
+		File playerFile = new File(playerDataFolderPath, playerId.toString());
+		return this.loadPlayerDataIfExist(playerFile);
 	}
 
-	// loading PlayerData by a given name and returns null, if there is no data stored for a player with this name
-	@Deprecated
-	PlayerData loadPlayerDataFromStorageIfExist(String playerName) {
-		File playerFile = new File(playerDataFolderPath + File.separator + playerName);
+	// loads the player data from the given file:
+	private PlayerData loadPlayerDataIfExist(File playerFile) {
+		// check if player data file exists:
+		if (!playerFile.exists()) {
+			return null;
+		}
 
 		PlayerData playerData = new PlayerData();
 
-		// if it doesn't exist as a file
-		if (!playerFile.exists()) {
-			return null;
-		} else {
-			// otherwise, read the file
-			BufferedReader inStream = null;
-			try {
-				inStream = new BufferedReader(new FileReader(playerFile.getAbsolutePath()));
+		// read the file:
+		BufferedReader inStream = null;
+		try {
+			inStream = new BufferedReader(new FileReader(playerFile));
 
-				// first line is the location as string
-				String homeLocationString = inStream.readLine();
-				// first line is the location as string
-				String spawnLocationString = inStream.readLine();
+			// first line is the home location as string:
+			String homeLocationString = inStream.readLine();
+			// second line is the spawn location as string:
+			String spawnLocationString = inStream.readLine();
 
-				// convert those to SoftBlockLocations and store them
+			// convert those to SoftBlockLocations and store them:
+			if (homeLocationString != null) {
 				playerData.homeLocation = SoftBlockLocation.getFromString(homeLocationString);
+			}
+			if (spawnLocationString != null) {
 				playerData.spawnLocation = SoftBlockLocation.getFromString(spawnLocationString);
-
-				inStream.close();
 			}
-
-			// if there's any problem with the file's content, log an error message
-			catch (Exception e) {
-				Log.severe("Unable to load data for player \"" + playerName + "\": " + e.getMessage());
-			}
-
-			try {
-				if (inStream != null) inStream.close();
-			} catch (IOException exception) {
+		} catch (Exception e) {
+			// log if a problem occurs:
+			Log.severe("Unable to load player data from \"" + playerFile.getPath() + "\": " + e.getMessage());
+		} finally {
+			if (inStream != null) {
+				try {
+					inStream.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
 			}
 		}
-
 		return playerData;
 	}
 
-	// saves changes to player data. MUST be called after you're done making changes, otherwise a reload will lose them
-	@Deprecated
-	void savePlayerData(String playerName, PlayerData playerData) {
+	/**
+	 * Saves the {@link PlayerData}. MUST be called after making changes, otherwise a reload will lose them.
+	 * 
+	 * @param playerId
+	 *            the player's unique id
+	 * @param playerData
+	 *            the player data
+	 */
+	void savePlayerData(UUID playerId, PlayerData playerData) {
 		BufferedWriter outStream = null;
 		try {
 			// open the player's file
-			File playerDataFile = new File(playerDataFolderPath + File.separator + playerName);
+			File playerDataFile = new File(playerDataFolderPath, playerId.toString());
 			playerDataFile.createNewFile();
 			outStream = new BufferedWriter(new FileWriter(playerDataFile));
 
@@ -150,28 +210,53 @@ class DataStore {
 			// second line is the spawn location:
 			outStream.write(playerData.spawnLocation != null ? playerData.spawnLocation.toString() : "not set");
 			outStream.newLine();
-
 		} catch (Exception e) {
-			// if any problem, log it
-			Log.severe("Unexpected exception saving data for player \"" + playerName + "\": " + e.getMessage());
-		}
-
-		try {
-			// close the file
+			// log if a problem occurs:
+			Log.severe("Unexpected exception saving data for player \"" + playerId + "\": " + e.getMessage());
+		} finally {
+			// close the file:
 			if (outStream != null) {
-				outStream.close();
+				try {
+					outStream.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
 			}
-		} catch (IOException exception) {
 		}
 	}
 
-	// whether or not data was stored for a player with this name
-	@Deprecated
-	boolean existsPlayerData(String playerName) {
-		File playerFile = new File(playerDataFolderPath + File.separator + playerName);
-		// whether or not the file exists
+	/**
+	 * Checks if there is data stored for a given player id.
+	 * 
+	 * @param playerId
+	 *            the player id
+	 * @return <code>true</code> if there is data stored, <code>false</code> otherwise
+	 */
+	boolean existsPlayerData(UUID playerId) {
+		File playerFile = new File(playerDataFolderPath, playerId.toString());
+		// whether or not the file exists:
 		return playerFile.exists();
 	}
+
+	// HANDLING OF OLD PLAYER DATA
+
+	private PlayerData loadAndRemoveOldPlayerData(String playerName) {
+		// look for old player data:
+		File oldPlayerDataFile = this.getOldPlayerDataFile(playerName);
+		PlayerData playerData = this.loadPlayerDataIfExist(oldPlayerDataFile);
+
+		if (playerData != null) {
+			// remove old player data file:
+			oldPlayerDataFile.delete();
+		}
+		return playerData;
+	}
+
+	private File getOldPlayerDataFile(String playerName) {
+		return new File(playerDataFolderPath, playerName);
+	}
+
+	// MESSAGES
 
 	// loads user-facing messages from the messages.yml configuration file into memory
 	private void loadMessages() {
