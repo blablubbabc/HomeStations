@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -18,23 +19,23 @@ import de.blablubbabc.homestations.utils.SoftBlockLocation;
 
 class DataStore {
 
-	// in-memory cache for player data
-	private final Map<String, PlayerData> playerNameToPlayerDataMap = new HashMap<String, PlayerData>();
-
-	// in-memory cache for messages
-	private String[] messages;
-
 	// path information:
 	final static String pluginFolderPath = "plugins" + File.separator + "HomeStations";
 	final static String messagesFilePath = pluginFolderPath + File.separator + "messages.yml";
 	final static String homesFilePath = pluginFolderPath + File.separator + "homes.yml";
 	final static String playerDataFolderPath = pluginFolderPath + File.separator + "PlayerData";
 
+	// in-memory cache for player data:
+	private final Map<String, PlayerData> playerNameToPlayerDataMap = new HashMap<String, PlayerData>();
+
+	// in-memory cache for messages:
+	private final Map<Message, String> messages = new EnumMap<Message, String>(Message.class);
+
 	DataStore() {
-		// load up all the messages from messages.yml
+		// load messages:
 		this.loadMessages();
 
-		// ensure data folders exist
+		// ensure player data folders exist:
 		new File(playerDataFolderPath).mkdirs();
 	}
 
@@ -174,12 +175,8 @@ class DataStore {
 
 	// loads user-facing messages from the messages.yml configuration file into memory
 	private void loadMessages() {
-		Message[] messageIDs = Message.values();
-		messages = new String[Message.values().length];
-
-		Map<String, CustomizableMessage> defaults = new HashMap<String, CustomizableMessage>();
-
-		// initialize defaults
+		// initialize defaults:
+		Map<Message, MessageData> defaults = new EnumMap<Message, MessageData>(Message.class);
 		this.addDefault(defaults, Message.SpawnStationAdded, "&aA spawn station was added!", null);
 		this.addDefault(defaults, Message.MainSpawnStationSet, "&aThe main spawn station was set!", null);
 		this.addDefault(defaults, Message.NoMainSpawnStationSet, "&cThere is no valid main spawn station set yet!", null);
@@ -192,31 +189,32 @@ class DataStore {
 		this.addDefault(defaults, Message.ThisIsNoStation, "&cThis is not a valid station!", null);
 		this.addDefault(defaults, Message.NoPermission, "&cYou don't have the permission to do that!", null);
 
-		// load the message config file
+		// load the message config file:
 		FileConfiguration config = YamlConfiguration.loadConfiguration(new File(messagesFilePath));
 
-		// for each message ID
-		for (int i = 0; i < messageIDs.length; i++) {
-			// get default for this message
-			Message messageID = messageIDs[i];
-			CustomizableMessage messageData = defaults.get(messageID.name());
+		// load messages:
+		for (Message messageID : Message.values()) {
+			// get default for this message:
+			MessageData messageData = defaults.get(messageID);
 
-			// if default is missing, log an error and use some fake data for now so that the plugin can run
+			// if default is missing, log an error and use some fake data for now so that the plugin can run:
 			if (messageData == null) {
-				Log.severe("Missing message for " + messageID.name() + ".  Please contact the developer.");
-				messageData = new CustomizableMessage(messageID, "Missing message!  ID: " + messageID.name() + ".  Please contact a server admin.", null);
+				Log.severe("Missing default message for '" + messageID.name() + "'.  Please contact the developer.");
+				messageData = new MessageData(messageID, "Missing message!  ID: " + messageID.name() + ".  Please contact a server admin.", null);
 			}
 
-			// read the message from the file, use default if necessary
+			// read the message from the file, use default if necessary:
 			String message = config.getString("Messages." + messageID.name() + ".Text", messageData.text);
+			// write value back to config (creates defaults):
 			config.set("Messages." + messageID.name() + ".Text", message);
 
-			// colorize and store message
-			this.messages[messageID.ordinal()] = ChatColor.translateAlternateColorCodes('&', message);
+			// colorize and store message:
+			messages.put(messageID, ChatColor.translateAlternateColorCodes('&', message));
 
+			// write notes back to config (creates defaults):
 			if (messageData.notes != null) {
-				messageData.notes = config.getString("Messages." + messageID.name() + ".Notes", messageData.notes);
-				config.set("Messages." + messageID.name() + ".Notes", messageData.notes);
+				String notes = config.getString("Messages." + messageID.name() + ".Notes", messageData.notes);
+				config.set("Messages." + messageID.name() + ".Notes", notes);
 			}
 		}
 
@@ -232,20 +230,23 @@ class DataStore {
 	}
 
 	// helper for above, adds a default message and notes to go with a message ID
-	private void addDefault(Map<String, CustomizableMessage> defaults, Message id, String text, String notes) {
-		CustomizableMessage message = new CustomizableMessage(id, text, notes);
-		defaults.put(id.name(), message);
+	private void addDefault(Map<Message, MessageData> defaults, Message id, String text, String notes) {
+		MessageData message = new MessageData(id, text, notes);
+		defaults.put(id, message);
 	}
 
 	// gets a message from memory
 	public String getMessage(Message messageID, String... args) {
-		String message = messages[messageID.ordinal()];
+		String message = messages.get(messageID);
+		if (message == null) message = "ERROR:Missing Message for '" + messageID + "'";
 
-		for (int i = 0; i < args.length; i++) {
-			String param = args[i];
-			message = message.replace("{" + i + "}", param);
+		// replace placeholders:
+		if (args != null) {
+			for (int i = 0; i < args.length; i++) {
+				String param = args[i];
+				message = message.replace("{" + i + "}", param);
+			}
 		}
-
 		return message;
 	}
 }
