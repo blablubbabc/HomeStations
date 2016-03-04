@@ -116,7 +116,7 @@ public class HomeStations extends JavaPlugin implements Listener {
 		saveConfig();
 
 		// init DataStore
-		this.dataStore = new DataStore();
+		dataStore = new DataStore();
 
 		// load spawn stations locations
 		homesConfig = YamlConfiguration.loadConfiguration(new File(DataStore.homesFilePath));
@@ -162,14 +162,14 @@ public class HomeStations extends JavaPlugin implements Listener {
 
 		// player login listener
 		Bukkit.getServer().getPluginManager().registerEvents(this, this);
-		
+
 		// load data for all online players:
 		for (Player player : Bukkit.getOnlinePlayers()) {
 			// get his player data, forcing it to initialize if we've never seen him before
-			this.dataStore.getPlayerData(player.getName());
+			dataStore.getPlayerData(player.getName());
 		}
 	}
-	
+
 	@Override
 	public void onDisable() {
 		instance = null;
@@ -256,7 +256,8 @@ public class HomeStations extends JavaPlugin implements Listener {
 					return true;
 				}
 				mainSpawnStation = new SoftBlockLocation(location);
-				// just in cases this wasn't already a spawn station before; set will make sure that it is only kept once:
+				// just in cases this wasn't already a spawn station before; set will make sure that it is only kept
+				// once:
 				spawnStations.add(mainSpawnStation);
 				player.sendMessage(dataStore.getMessage(Message.MainSpawnStationSet));
 				saveSpawnStations();
@@ -286,7 +287,8 @@ public class HomeStations extends JavaPlugin implements Listener {
 		return getStationFaceHigherStationButton(buttonT) != null;
 	}
 
-	// checks for the location above the emerald block, the lower button. Returns the stations direction, or null if not a valid station:
+	// checks for the location above the emerald block, the lower button. Returns the stations direction, or null if not
+	// a valid station:
 	public BlockFace getStationFaceForLowerStationButton(Block buttonB) {
 		if (buttonB == null) return null;
 		if (buttonB.getType() != Material.STONE_BUTTON) {
@@ -341,7 +343,7 @@ public class HomeStations extends JavaPlugin implements Listener {
 	@EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
 	void onPlayerJoin(PlayerJoinEvent event) {
 		// get his player data, forcing it to initialize if we've never seen him before
-		this.dataStore.getPlayerData(event.getPlayer().getName());
+		dataStore.getPlayerData(event.getPlayer().getName());
 	}
 
 	// when a player quits...
@@ -351,7 +353,7 @@ public class HomeStations extends JavaPlugin implements Listener {
 		String playerName = player.getName();
 
 		// drop player data from memory
-		this.dataStore.clearCachedPlayerData(playerName);
+		dataStore.clearCachedPlayerData(playerName);
 	}
 
 	// when a player presses a button...
@@ -541,5 +543,4 @@ public class HomeStations extends JavaPlugin implements Listener {
 		}, teleportDelay);
 
 	}
-
 }

@@ -9,6 +9,7 @@ import org.bukkit.Location;
 import org.bukkit.World;
 
 public class SoftBlockLocation {
+
 	private String worldName;
 	private int x;
 	private int y;

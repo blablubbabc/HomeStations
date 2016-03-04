@@ -114,5 +114,4 @@ public class FireworkEffectPlayer {
 		}
 		return null;
 	}
-
 }

@@ -5,6 +5,7 @@ import java.util.logging.Logger;
 import org.bukkit.plugin.Plugin;
 
 public class Log {
+
 	private static Logger logger;
 
 	public static void init(Plugin pl) {
