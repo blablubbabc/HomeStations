@@ -1,6 +1,6 @@
 name: HomeStations
 main: de.blablubbabc.homestations.HomeStations
-version: 1.5
+version: 1.6
 author: blablubbabc
 description: Allows warping between the spawn stations and a home station.
 softdepend: [InSigns, TagAPI, Votifier, Multiverse-Core, My Worlds, Transporter, Multiworld]
