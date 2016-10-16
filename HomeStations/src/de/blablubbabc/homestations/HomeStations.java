@@ -42,6 +42,9 @@ import de.blablubbabc.homestations.utils.Utils;
 public class HomeStations extends JavaPlugin implements Listener {
 
 	public static HomeStations instance;
+	
+	public static final String PERMISSION_ADMIN = "homestation.admin";
+	public static final String PERMISSION_USE = "homestation.use";
 
 	private final Vector toBlockMid = new Vector(0.5, 0, 0.5);
 
@@ -243,7 +246,7 @@ public class HomeStations extends JavaPlugin implements Listener {
 		}
 
 		Player player = (Player) sender;
-		if (!player.hasPermission("homestation.admin")) {
+		if (!player.hasPermission(PERMISSION_ADMIN)) {
 			player.sendMessage(dataStore.getMessage(Message.NoPermission));
 			return true;
 		}
@@ -368,7 +371,7 @@ public class HomeStations extends JavaPlugin implements Listener {
 			if (player.isInsideVehicle()) return;
 
 			if (this.isHigherStationButton(clicked)) {
-				if (!player.hasPermission("homestation.use")) {
+				if (!player.hasPermission(PERMISSION_USE)) {
 					player.sendMessage(dataStore.getMessage(Message.NoPermission));
 					return;
 				}
@@ -418,7 +421,7 @@ public class HomeStations extends JavaPlugin implements Listener {
 					this.teleport(player, player.getLocation(), location, stationFacing);
 				}
 			} else if (this.isLowerStationButton(clicked)) {
-				if (!player.hasPermission("homestation.use")) {
+				if (!player.hasPermission(PERMISSION_USE)) {
 					player.sendMessage(dataStore.getMessage(Message.NoPermission));
 					return;
 				}
@@ -441,12 +444,12 @@ public class HomeStations extends JavaPlugin implements Listener {
 	}
 
 	public void playUpEffectAt(final Location location, final double end) {
-		playerEffect1At(location);
+		playEffect1At(location);
 		getServer().getScheduler().runTaskLater(this, new Runnable() {
 
 			@Override
 			public void run() {
-				playerEffect2At(location.add(0.0D, upEffectDistance, 0.0D));
+				playEffect2At(location.add(0.0D, upEffectDistance, 0.0D));
 				if (location.add(0.0D, upEffectDistance, 0.0D).getY() < end) {
 					getServer().getScheduler().runTaskLater(HomeStations.instance, new Runnable() {
 
@@ -461,12 +464,12 @@ public class HomeStations extends JavaPlugin implements Listener {
 	}
 
 	public void playDownEffectAt(final Location location, final double end) {
-		playerEffect2At(location);
+		playEffect2At(location);
 		getServer().getScheduler().runTaskLater(this, new Runnable() {
 
 			@Override
 			public void run() {
-				playerEffect1At(location.subtract(0, 1, 0));
+				playEffect1At(location.subtract(0, 1, 0));
 				if (location.subtract(0, 1, 0).getY() >= end) {
 					getServer().getScheduler().runTaskLater(HomeStations.instance, new Runnable() {
 
@@ -480,7 +483,7 @@ public class HomeStations extends JavaPlugin implements Listener {
 		}, 1L);
 	}
 
-	private void playerEffect1At(Location location) {
+	private void playEffect1At(Location location) {
 		try {
 			fplayer.playFirework(location.getWorld(), location, fe1);
 		} catch (Exception e) {
@@ -488,7 +491,7 @@ public class HomeStations extends JavaPlugin implements Listener {
 		}
 	}
 
-	private void playerEffect2At(Location location) {
+	private void playEffect2At(Location location) {
 		try {
 			fplayer.playFirework(location.getWorld(), location, fe2);
 		} catch (Exception e) {

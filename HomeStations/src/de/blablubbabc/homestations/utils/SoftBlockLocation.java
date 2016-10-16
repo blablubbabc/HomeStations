@@ -145,5 +145,4 @@ public class SoftBlockLocation {
 
 		return new SoftBlockLocation(worldName, x, y, z);
 	}
-
 }

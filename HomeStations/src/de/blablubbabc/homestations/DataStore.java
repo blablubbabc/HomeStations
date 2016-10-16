@@ -324,7 +324,7 @@ class DataStore {
 	// gets a message from memory
 	public String getMessage(Message messageID, String... args) {
 		String message = messages.get(messageID);
-		if (message == null) message = "ERROR:Missing Message for '" + messageID + "'";
+		if (message == null) message = "ERROR:Missing message for '" + messageID + "'";
 
 		// replace placeholders:
 		if (args != null) {
