@@ -1,3 +1,7 @@
+/**
+ * Copyright (c) blablubbabc <http://www.blablubbabc.de>
+ * All rights reserved.
+ */
 package de.blablubbabc.homestations;
 
 import java.io.File;
@@ -34,7 +38,6 @@ import org.bukkit.material.Button;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.Vector;
 
-import de.blablubbabc.homestations.utils.FireworkEffectPlayer;
 import de.blablubbabc.homestations.utils.Log;
 import de.blablubbabc.homestations.utils.SoftBlockLocation;
 import de.blablubbabc.homestations.utils.Utils;
@@ -42,7 +45,7 @@ import de.blablubbabc.homestations.utils.Utils;
 public class HomeStations extends JavaPlugin implements Listener {
 
 	public static HomeStations instance;
-	
+
 	public static final String PERMISSION_ADMIN = "homestation.admin";
 	public static final String PERMISSION_USE = "homestation.use";
 
@@ -52,8 +55,6 @@ public class HomeStations extends JavaPlugin implements Listener {
 	private YamlConfiguration homesConfig;
 	private Set<SoftBlockLocation> spawnStations;
 	private SoftBlockLocation mainSpawnStation;
-
-	private FireworkEffectPlayer fplayer;
 
 	private FireworkEffect fe1;
 	private FireworkEffect fe2;
@@ -159,9 +160,6 @@ public class HomeStations extends JavaPlugin implements Listener {
 				saveSpawnStations();
 			}
 		}, 1L);
-
-		// firework player:
-		fplayer = new FireworkEffectPlayer();
 
 		// register listeners:
 		Bukkit.getServer().getPluginManager().registerEvents(this, this);
@@ -484,19 +482,11 @@ public class HomeStations extends JavaPlugin implements Listener {
 	}
 
 	private void playEffect1At(Location location) {
-		try {
-			fplayer.playFirework(location.getWorld(), location, fe1);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+		Utils.playFireworkEffect(location, fe1);
 	}
 
 	private void playEffect2At(Location location) {
-		try {
-			fplayer.playFirework(location.getWorld(), location, fe2);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+		Utils.playFireworkEffect(location, fe2);
 	}
 
 	private float faceToYaw(final BlockFace face) {

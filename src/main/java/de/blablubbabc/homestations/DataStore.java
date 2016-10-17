@@ -1,3 +1,7 @@
+/**
+ * Copyright (c) blablubbabc <http://www.blablubbabc.de>
+ * All rights reserved.
+ */
 package de.blablubbabc.homestations;
 
 import java.io.BufferedReader;
@@ -312,7 +316,6 @@ class DataStore {
 		}
 
 		defaults.clear();
-		System.gc();
 	}
 
 	// helper for above, adds a default message and notes to go with a message ID

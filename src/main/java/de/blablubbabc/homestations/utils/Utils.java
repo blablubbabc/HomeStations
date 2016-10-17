@@ -1,10 +1,31 @@
+/**
+ * Copyright (c) blablubbabc <http://www.blablubbabc.de>
+ * All rights reserved.
+ */
 package de.blablubbabc.homestations.utils;
 
 import org.bukkit.Bukkit;
+import org.bukkit.EntityEffect;
+import org.bukkit.FireworkEffect;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.entity.Firework;
+import org.bukkit.inventory.meta.FireworkMeta;
 
 public class Utils {
+
+	public static void playFireworkEffect(Location loc, FireworkEffect effect) {
+		// spawn firework entity:
+		Firework firework = loc.getWorld().spawn(loc, Firework.class);
+		// apply given firework effect:
+		FireworkMeta fireworkMeta = firework.getFireworkMeta();
+		fireworkMeta.addEffect(effect);
+		firework.setFireworkMeta(fireworkMeta);
+		// play firework explosion effect:
+		firework.playEffect(EntityEffect.FIREWORK_EXPLODE);
+		// remove firework entity again (before it ticks and plays launching effects):
+		firework.remove();
+	}
 
 	// LOCATIONS TO / FROM STRING
 
