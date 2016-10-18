@@ -271,26 +271,24 @@ class DataStore {
 	// loads user-facing messages from the messages.yml configuration file into memory
 	private void loadMessages() {
 		// initialize defaults:
-		Map<Message, MessageData> defaults = new EnumMap<Message, MessageData>(Message.class);
-		this.addDefault(defaults, Message.SpawnStationAdded, "&aA spawn station was added!", null);
-		this.addDefault(defaults, Message.MainSpawnStationSet, "&aThe main spawn station was set!", null);
-		this.addDefault(defaults, Message.NoMainSpawnStationSet, "&cThere is no valid main spawn station set yet!", null);
-		this.addDefault(defaults, Message.HomeStationSet, "&aYou have set your home station! You will teleport here every time you trigger the top button of a spawn station.", null);
-		this.addDefault(defaults, Message.NoHomeStationSet, "&cYou don't have a home station set yet!", null);
-		this.addDefault(defaults, Message.HomeStationNotFound, "&cYour home station does no longer exist!", null);
-		this.addDefault(defaults, Message.SpawnStationSet, "&aYou have set your spawn station! You will teleport here every time you trigger the top button of a home station.", null);
-		this.addDefault(defaults, Message.NoSpawnStationSet, "&cYou don't have a spawn station set yet! &6Selecting main spawn station now.", null);
-		this.addDefault(defaults, Message.SpawnStationNotFound, "&cYour spawn station does no longer exist!", null);
-		this.addDefault(defaults, Message.ThisIsNoStation, "&cThis is not a valid station!", null);
-
-		this.addDefault(defaults, Message.TeleportToHome, "&aTeleporting home...", null);
-		this.addDefault(defaults, Message.TeleportToSpawn, "&aTeleporting to spawn...", null);
-		this.addDefault(defaults, Message.NotEnoughMoney, "&cYou don't have enough money! Teleporting costs &e{costs}$&c, but you only have &e{balance}$&c.", null);
-		this.addDefault(defaults, Message.TransactionFailure, "&cSomething went wrong: {error}", null);
-		this.addDefault(defaults, Message.TeleportCostsConfirm, "&cTeleporting costs &e{costs}$&c! &aClick again to confirm.", null);
-		this.addDefault(defaults, Message.TeleportCostsApplied, "&aWithdrawn teleport costs of &e{costs}$&a. You have &e{balance}$ &aleft.", null);
-
-		this.addDefault(defaults, Message.NoPermission, "&cYou don't have the permission to do that!", null);
+		Map<Message, String> defaults = new EnumMap<Message, String>(Message.class);
+		defaults.put(Message.SpawnStationAdded, "&aA spawn station was added!");
+		defaults.put(Message.MainSpawnStationSet, "&aThe main spawn station was set!");
+		defaults.put(Message.NoMainSpawnStationSet, "&cThere is no valid main spawn station set yet!");
+		defaults.put(Message.HomeStationSet, "&aYou have set your home station! You will teleport here every time you trigger the top button of a spawn station.");
+		defaults.put(Message.NoHomeStationSet, "&cYou don't have a home station set yet!");
+		defaults.put(Message.HomeStationNotFound, "&cYour home station does no longer exist!");
+		defaults.put(Message.SpawnStationSet, "&aYou have set your spawn station! You will teleport here every time you trigger the top button of a home station.");
+		defaults.put(Message.NoSpawnStationSet, "&cYou don't have a spawn station set yet! &6Selecting main spawn station now.");
+		defaults.put(Message.SpawnStationNotFound, "&cYour spawn station does no longer exist!");
+		defaults.put(Message.ThisIsNoStation, "&cThis is not a valid station!");
+		defaults.put(Message.TeleportToHome, "&aTeleporting home...");
+		defaults.put(Message.TeleportToSpawn, "&aTeleporting to spawn...");
+		defaults.put(Message.NotEnoughMoney, "&cYou don't have enough money! Teleporting costs &e{costs}$&c, but you only have &e{balance}$&c.");
+		defaults.put(Message.TransactionFailure, "&cSomething went wrong: {error}");
+		defaults.put(Message.TeleportCostsConfirm, "&cTeleporting costs &e{costs}$&c! &aClick again to confirm.");
+		defaults.put(Message.TeleportCostsApplied, "&aWithdrawn teleport costs of &e{costs}$&a. You have &e{balance}$ &aleft.");
+		defaults.put(Message.NoPermission, "&cYou don't have the permission to do that!");
 
 		// load the message config file:
 		FileConfiguration config = YamlConfiguration.loadConfiguration(new File(messagesFilePath));
@@ -298,43 +296,37 @@ class DataStore {
 		// load messages:
 		for (Message messageID : Message.values()) {
 			// get default for this message:
-			MessageData messageData = defaults.get(messageID);
+			String defaultMessage = defaults.get(messageID);
 
 			// if default is missing, log an error and use some fake data for now so that the plugin can run:
-			if (messageData == null) {
+			if (defaultMessage == null) {
 				logger.severe("Missing default message for '" + messageID.name() + "'.  Please contact the developer.");
-				messageData = new MessageData(messageID, "Missing message!  ID: " + messageID.name() + ".  Please contact a server admin.", null);
+				defaultMessage = "Missing message!  ID: " + messageID.name() + ".  Please contact a server admin.";
 			}
 
 			// read the message from the file, use default if necessary:
-			String message = config.getString("Messages." + messageID.name() + ".Text", messageData.text);
+			String message = config.getString(messageID.name(), defaultMessage);
+			// legacy: TODO remove in a future update (this was added in v1.7)
+			String legacyKey = "Messages." + messageID.name() + ".Text";
+			if (config.isSet(legacyKey)) {
+				// use old legacy value, and then remove it from the config:
+				message = config.getString(legacyKey, defaultMessage);
+				config.set(legacyKey, null);
+			}
+
 			// write value back to config (creates defaults):
-			config.set("Messages." + messageID.name() + ".Text", message);
+			config.set(messageID.name(), message);
 
 			// colorize and store message:
 			messages.put(messageID, ChatColor.translateAlternateColorCodes('&', message));
-
-			// write notes back to config (creates defaults):
-			if (messageData.notes != null) {
-				String notes = config.getString("Messages." + messageID.name() + ".Notes", messageData.notes);
-				config.set("Messages." + messageID.name() + ".Notes", notes);
-			}
 		}
 
-		// save any changes
+		// save any changes:
 		try {
 			config.save(DataStore.messagesFilePath);
 		} catch (IOException exception) {
 			logger.severe("Unable to write to the configuration file at \"" + DataStore.messagesFilePath + "\"");
 		}
-
-		defaults.clear();
-	}
-
-	// helper for above, adds a default message and notes to go with a message ID
-	private void addDefault(Map<Message, MessageData> defaults, Message id, String text, String notes) {
-		MessageData message = new MessageData(id, text, notes);
-		defaults.put(id, message);
 	}
 
 	// gets a message from memory
