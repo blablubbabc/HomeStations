@@ -489,7 +489,7 @@ public class HomeStations extends JavaPlugin implements Listener {
 
 	private boolean handleTeleportCost(Player player, SoftBlockLocation currentStationLocation) {
 		// handle teleport costs:
-		if (teleportCosts > 0.0D && VaultController.hasEconomy()) {
+		if (teleportCosts != 0.0D && VaultController.hasEconomy()) {
 			UUID playerId = player.getUniqueId();
 
 			// get and clear last confirmation request:
@@ -497,7 +497,7 @@ public class HomeStations extends JavaPlugin implements Listener {
 
 			// check balance:
 			double balance = VaultController.getBalance(player);
-			if (balance < teleportCosts) {
+			if (teleportCosts > 0.0D && balance < teleportCosts) {
 				// not enough money:
 				Utils.sendMessage(player, dataStore.getMessage(Message.NotEnoughMoney,
 						"costs", VaultController.DECIMAL_FORMAT.format(teleportCosts),
@@ -505,16 +505,18 @@ public class HomeStations extends JavaPlugin implements Listener {
 				return false;
 			}
 
-			if (!currentStationLocation.equals(confirmation)) {
+			// no confirmation required if message is empty:
+			String confirmMessage = dataStore.getMessage(Message.TeleportCostsConfirm,
+					"costs", VaultController.DECIMAL_FORMAT.format(teleportCosts),
+					"balance", VaultController.DECIMAL_FORMAT.format(balance));
+			if (!currentStationLocation.equals(confirmation) && !confirmMessage.isEmpty()) {
 				// request new confirmation:
 				teleportCostConfirmations.put(playerId, currentStationLocation);
-				Utils.sendMessage(player, dataStore.getMessage(Message.TeleportCostsConfirm,
-						"costs", VaultController.DECIMAL_FORMAT.format(teleportCosts),
-						"balance", VaultController.DECIMAL_FORMAT.format(balance)));
+				Utils.sendMessage(player, confirmMessage);
 				return false;
 			} else {
-				// withdraw money:
-				String error = VaultController.withdrawMoney(player, teleportCosts);
+				// update balance:
+				String error = VaultController.applyChange(player, teleportCosts, false);
 				if (error != null) {
 					// transaction failure:
 					Utils.sendMessage(player, dataStore.getMessage(Message.TransactionFailure,
@@ -522,8 +524,7 @@ public class HomeStations extends JavaPlugin implements Listener {
 					return false;
 				} else {
 					// transaction successful:
-					// update balance:
-					balance = VaultController.getBalance(player);
+					balance = VaultController.getBalance(player); // new balance
 					Utils.sendMessage(player, dataStore.getMessage(Message.TeleportCostsApplied,
 							"costs", VaultController.DECIMAL_FORMAT.format(teleportCosts),
 							"balance", VaultController.DECIMAL_FORMAT.format(balance)));
