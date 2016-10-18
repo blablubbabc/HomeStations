@@ -272,21 +272,21 @@ class DataStore {
 	private void loadMessages() {
 		// initialize defaults:
 		Map<Message, String> defaults = new EnumMap<Message, String>(Message.class);
-		defaults.put(Message.SpawnStationAdded, "&aA spawn station was added!");
-		defaults.put(Message.MainSpawnStationSet, "&aThe main spawn station was set!");
-		defaults.put(Message.NoMainSpawnStationSet, "&cThere is no valid main spawn station set yet!");
-		defaults.put(Message.HomeStationSet, "&aYou have set your home station! You will teleport here every time you trigger the top button of a spawn station.");
-		defaults.put(Message.NoHomeStationSet, "&cYou don't have a home station set yet!");
-		defaults.put(Message.HomeStationNotFound, "&cYour home station does no longer exist!");
-		defaults.put(Message.SpawnStationSet, "&aYou have set your spawn station! You will teleport here every time you trigger the top button of a home station.");
-		defaults.put(Message.NoSpawnStationSet, "&cYou don't have a spawn station set yet! &6Selecting main spawn station now.");
-		defaults.put(Message.SpawnStationNotFound, "&cYour spawn station does no longer exist!");
+		defaults.put(Message.SpawnStationAdded, "&aA &espawn station &awas added!");
+		defaults.put(Message.MainSpawnStationSet, "&aThe &emain spawn station &awas set!");
+		defaults.put(Message.NoMainSpawnStationSet, "&cThere is no valid &emain spawn station &cset yet!");
+		defaults.put(Message.HomeStationSet, "&aYou have set your &ehome station&a! &aYou will teleport here every time you trigger the top button of a &espawn station&a.");
+		defaults.put(Message.NoHomeStationSet, "&cYou don't have a &ehome station &cset yet!");
+		defaults.put(Message.HomeStationNotFound, "&cYour &ehome station &cdoes no longer exist!");
+		defaults.put(Message.SpawnStationSet, "&aYou have set your &espawn station&a! &aYou will teleport here every time you trigger the top button of a &ehome station&a.");
+		defaults.put(Message.NoSpawnStationSet, "&cYou don't have a &espawn station &cset yet! &6Selecting the &emain spawn station &6for you.");
+		defaults.put(Message.SpawnStationNotFound, "&cYour &espawn station &cdoes no longer exist!");
 		defaults.put(Message.ThisIsNoStation, "&cThis is not a valid station!");
 		defaults.put(Message.TeleportToHome, "&aTeleporting home...");
 		defaults.put(Message.TeleportToSpawn, "&aTeleporting to spawn...");
 		defaults.put(Message.NotEnoughMoney, "&cYou don't have enough money! Teleporting costs &e{costs}$&c, but you only have &e{balance}$&c.");
-		defaults.put(Message.TransactionFailure, "&cSomething went wrong: {error}");
-		defaults.put(Message.TeleportCostsConfirm, "&cTeleporting costs &e{costs}$&c! &aClick again to confirm.");
+		defaults.put(Message.TransactionFailure, "&cSomething went wrong: &e{error}");
+		defaults.put(Message.TeleportCostsConfirm, "&cTeleporting costs &e{costs}$&c, you have &e{balance}$&c! &6Click again to confirm.");
 		defaults.put(Message.TeleportCostsApplied, "&aWithdrawn teleport costs of &e{costs}$&a. You have &e{balance}$ &aleft.");
 		defaults.put(Message.NoPermission, "&cYou don't have the permission to do that!");
 
