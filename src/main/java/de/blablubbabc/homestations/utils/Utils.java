@@ -22,7 +22,7 @@ public class Utils {
 	private static final Pattern NEW_LINE = Pattern.compile("\\r?(\\n|\\\\n)");
 
 	public static List<String> getLines(String text) {
-		return Arrays.asList(NEW_LINE.split(text, -1));
+		return Arrays.asList(NEW_LINE.split(text));
 	}
 
 	public static String replacePlaceholders(String message, String... placeholders) {
