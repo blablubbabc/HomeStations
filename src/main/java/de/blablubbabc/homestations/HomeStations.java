@@ -500,14 +500,14 @@ public class HomeStations extends JavaPlugin implements Listener {
 			if (teleportCosts > 0.0D && balance < teleportCosts) {
 				// not enough money:
 				Utils.sendMessage(player, dataStore.getMessage(Message.NotEnoughMoney,
-						"costs", VaultController.DECIMAL_FORMAT.format(teleportCosts),
+						"costs", VaultController.DECIMAL_FORMAT.format(Math.abs(teleportCosts)),
 						"balance", VaultController.DECIMAL_FORMAT.format(balance)));
 				return false;
 			}
 
 			// no confirmation required if message is empty:
 			String confirmMessage = dataStore.getMessage(Message.TeleportCostsConfirm,
-					"costs", VaultController.DECIMAL_FORMAT.format(teleportCosts),
+					"costs", VaultController.DECIMAL_FORMAT.format(Math.abs(teleportCosts)),
 					"balance", VaultController.DECIMAL_FORMAT.format(balance));
 			if (!currentStationLocation.equals(confirmation) && !confirmMessage.isEmpty()) {
 				// request new confirmation:
@@ -516,7 +516,7 @@ public class HomeStations extends JavaPlugin implements Listener {
 				return false;
 			} else {
 				// update balance:
-				String error = VaultController.applyChange(player, teleportCosts, false);
+				String error = VaultController.applyChange(player, -teleportCosts, false);
 				if (error != null) {
 					// transaction failure:
 					Utils.sendMessage(player, dataStore.getMessage(Message.TransactionFailure,
@@ -526,7 +526,7 @@ public class HomeStations extends JavaPlugin implements Listener {
 					// transaction successful:
 					balance = VaultController.getBalance(player); // new balance
 					Utils.sendMessage(player, dataStore.getMessage(Message.TeleportCostsApplied,
-							"costs", VaultController.DECIMAL_FORMAT.format(teleportCosts),
+							"costs", VaultController.DECIMAL_FORMAT.format(Math.abs(teleportCosts)),
 							"balance", VaultController.DECIMAL_FORMAT.format(balance)));
 				}
 			}

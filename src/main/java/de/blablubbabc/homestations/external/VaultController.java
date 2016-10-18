@@ -188,7 +188,7 @@ public class VaultController {
 			double balance = getBalance(player);
 			if (balance < deltaAmount) {
 				if (withdrawPartial) deltaAmount = balance;
-				else return "";
+				else return "Not enough money.";
 			}
 			return withdrawMoney(player, deltaAmount);
 		}
