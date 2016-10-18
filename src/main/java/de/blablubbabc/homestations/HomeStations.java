@@ -509,7 +509,8 @@ public class HomeStations extends JavaPlugin implements Listener {
 				// request new confirmation:
 				teleportCostConfirmations.put(playerId, currentStationLocation);
 				Utils.sendMessage(player, dataStore.getMessage(Message.TeleportCostsConfirm,
-						"costs", VaultController.DECIMAL_FORMAT.format(teleportCosts)));
+						"costs", VaultController.DECIMAL_FORMAT.format(teleportCosts),
+						"balance", VaultController.DECIMAL_FORMAT.format(balance)));
 				return false;
 			} else {
 				// withdraw money:
@@ -521,6 +522,8 @@ public class HomeStations extends JavaPlugin implements Listener {
 					return false;
 				} else {
 					// transaction successful:
+					// update balance:
+					balance = VaultController.getBalance(player);
 					Utils.sendMessage(player, dataStore.getMessage(Message.TeleportCostsApplied,
 							"costs", VaultController.DECIMAL_FORMAT.format(teleportCosts),
 							"balance", VaultController.DECIMAL_FORMAT.format(balance)));
