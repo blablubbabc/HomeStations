@@ -306,12 +306,11 @@ class DataStore {
 
 			// read the message from the file, use default if necessary:
 			String message = config.getString(messageID.name(), defaultMessage);
-			// legacy: TODO remove in a future update (this was added in v1.7)
+			// check for old legacy messages:
 			String legacyKey = "Messages." + messageID.name() + ".Text";
 			if (config.isSet(legacyKey)) {
-				// use old legacy value, and then remove it from the config:
+				// use old legacy value instead:
 				message = config.getString(legacyKey, defaultMessage);
-				config.set(legacyKey, null);
 			}
 
 			// write value back to config (creates defaults):
@@ -320,6 +319,9 @@ class DataStore {
 			// colorize and store message:
 			messages.put(messageID, ChatColor.translateAlternateColorCodes('&', message));
 		}
+
+		// remove legacy values from config:
+		config.set("Messages", null);
 
 		// save any changes:
 		try {
