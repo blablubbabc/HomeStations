@@ -43,7 +43,7 @@ public class VaultController {
 
 		@EventHandler
 		public void onServiceUnregister(ServiceUnregisterEvent event) {
-			if (findVaultEconomy()) return;
+			if (!findVaultEconomy()) return;
 
 			RegisteredServiceProvider<?> serviceProvider = event.getProvider();
 			if (serviceProvider.getService() == Economy.class) {
