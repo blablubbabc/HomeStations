@@ -10,9 +10,31 @@ import org.bukkit.FireworkEffect;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Firework;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.meta.FireworkMeta;
 
 public class Utils {
+
+	public static String replacePlaceholders(String message, String... placeholders) {
+		if (message != null && placeholders != null) {
+			for (int i = 1; i < placeholders.length; i += 2) {
+				message = replacePlaceholder(message, placeholders[i - 1], placeholders[i]);
+			}
+		}
+		return message;
+	}
+
+	public static String replacePlaceholder(String message, String placeholder, String value) {
+		if (message == null || placeholder == null || value == null) return message;
+		return message.replace("{" + placeholder + "}", value);
+	}
+
+	public static void sendMessage(Player player, String message) {
+		if (player == null) return;
+		if (message == null || message.isEmpty()) return;
+
+		player.sendMessage(message);
+	}
 
 	public static void playFireworkEffect(Location loc, FireworkEffect effect) {
 		// spawn firework entity:

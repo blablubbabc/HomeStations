@@ -1,6 +1,6 @@
 name: HomeStations
 main: de.blablubbabc.homestations.HomeStations
-softdepend: [InSigns, TagAPI, Votifier, Multiverse-Core, My Worlds, Transporter, Multiworld]
+softdepend: [Vault, InSigns, TagAPI, Votifier, Multiverse-Core, My Worlds, Transporter, Multiworld]
 version: '${version}'
 authors: [${authors}]
 website: '${url}'

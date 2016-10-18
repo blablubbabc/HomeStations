@@ -15,5 +15,11 @@ public enum Message {
 	NoSpawnStationSet,
 	SpawnStationNotFound,
 	ThisIsNoStation,
+	TeleportToHome,
+	TeleportToSpawn,
+	NotEnoughMoney,
+	TransactionFailure,
+	TeleportCostsConfirm,
+	TeleportCostsApplied,
 	NoPermission;
 }

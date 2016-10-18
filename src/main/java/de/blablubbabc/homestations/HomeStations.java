@@ -7,9 +7,11 @@ package de.blablubbabc.homestations;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -38,13 +40,17 @@ import org.bukkit.material.Button;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.Vector;
 
-import de.blablubbabc.homestations.utils.Log;
+import de.blablubbabc.homestations.external.VaultController;
 import de.blablubbabc.homestations.utils.SoftBlockLocation;
 import de.blablubbabc.homestations.utils.Utils;
 
 public class HomeStations extends JavaPlugin implements Listener {
 
-	public static HomeStations instance;
+	private static HomeStations instance;
+
+	public static HomeStations getInstance() {
+		return instance;
+	}
 
 	public static final String PERMISSION_ADMIN = "homestation.admin";
 	public static final String PERMISSION_USE = "homestation.use";
@@ -68,14 +74,80 @@ public class HomeStations extends JavaPlugin implements Listener {
 	private double downEffectOffset;
 	private double teleportYOffset;
 
+	private double teleportCosts;
+
+	private final Map<UUID, SoftBlockLocation> teleportCostConfirmations = new HashMap<UUID, SoftBlockLocation>();
+
 	@Override
 	public void onEnable() {
 		instance = this;
 
-		// init Log
-		Log.init(this);
+		// load config:
+		this.loadConfig();
 
-		// read config
+		// save config (writing defaults):
+		this.saveConfig();
+
+		// initialize DataStore:
+		dataStore = new DataStore(this.getLogger());
+
+		// load spawn stations locations:
+		homesConfig = YamlConfiguration.loadConfiguration(new File(DataStore.homesFilePath));
+		spawnStations = new HashSet<SoftBlockLocation>(SoftBlockLocation.getFromStringList(homesConfig.getStringList("Homes.Spawn Stations")));
+		mainSpawnStation = SoftBlockLocation.getFromString(homesConfig.getString("Homes.Main Spawn Station"));
+
+		Bukkit.getServer().getScheduler().runTaskLater(this, new Runnable() {
+
+			@Override
+			public void run() {
+				// validate all spawn stations:
+				Iterator<SoftBlockLocation> spawnLocs = spawnStations.iterator();
+				while (spawnLocs.hasNext()) {
+					SoftBlockLocation softLocation = spawnLocs.next();
+					Location location = softLocation.getBukkitLocation();
+					if (location == null || !isLowerStationButton(location.getBlock())) {
+						getLogger().warning("Invalid spawn station found (" + softLocation.toString() + "). Removing it now.");
+						spawnLocs.remove();
+					}
+				}
+
+				// load and validate spawn station:
+				if (mainSpawnStation != null) {
+					Location mainLocation = mainSpawnStation.getBukkitLocation();
+					if (mainLocation == null || !isLowerStationButton(mainLocation.getBlock())) {
+						getLogger().warning("Invalid main spawn station (" + mainSpawnStation.toString() + "). Removing it now.");
+						mainSpawnStation = null;
+					} else if (!spawnStations.contains(mainSpawnStation)) {
+						// add to spawn stations list:
+						spawnStations.add(mainSpawnStation);
+					}
+
+				}
+
+				// save:
+				saveSpawnStations();
+			}
+		}, 1L);
+
+		// register listeners:
+		Bukkit.getServer().getPluginManager().registerEvents(this, this);
+
+		// vault controller:
+		VaultController.enable(this);
+
+		// load data for all online players:
+		for (Player player : Bukkit.getOnlinePlayers()) {
+			// get his player data, forcing it to initialize if we've never seen him before
+			dataStore.getPlayerData(player);
+		}
+
+		// reset teleport cost confirmations, just in case:
+		teleportCostConfirmations.clear();
+	}
+
+	// loads the config and writes back loaded (defaults and corrected) values
+	private void loadConfig() {
+		// read config:
 		FileConfiguration config = this.getConfig();
 
 		// effects:
@@ -117,62 +189,19 @@ public class HomeStations extends JavaPlugin implements Listener {
 		teleportYOffset = config.getDouble("Downward.Teleport.Y Offset", 3.0D);
 		config.set("Downward.Teleport.Y Offset", teleportYOffset);
 
-		// save:
-		this.saveConfig();
-
-		// initialize DataStore:
-		dataStore = new DataStore();
-
-		// load spawn stations locations:
-		homesConfig = YamlConfiguration.loadConfiguration(new File(DataStore.homesFilePath));
-		spawnStations = new HashSet<SoftBlockLocation>(SoftBlockLocation.getFromStringList(homesConfig.getStringList("Homes.Spawn Stations")));
-		mainSpawnStation = SoftBlockLocation.getFromString(homesConfig.getString("Homes.Main Spawn Station"));
-
-		Bukkit.getServer().getScheduler().runTaskLater(this, new Runnable() {
-
-			@Override
-			public void run() {
-				// validate all spawn stations:
-				Iterator<SoftBlockLocation> spawnLocs = spawnStations.iterator();
-				while (spawnLocs.hasNext()) {
-					SoftBlockLocation softLocation = spawnLocs.next();
-					Location location = softLocation.getBukkitLocation();
-					if (location == null || !isLowerStationButton(location.getBlock())) {
-						Log.warning("Invalid spawn station found (" + softLocation.toString() + "). Removing it now.");
-						spawnLocs.remove();
-					}
-				}
-
-				// load and validate spawn station:
-				if (mainSpawnStation != null) {
-					Location mainLocation = mainSpawnStation.getBukkitLocation();
-					if (mainLocation == null || !isLowerStationButton(mainLocation.getBlock())) {
-						Log.warning("Invalid main spawn station (" + mainSpawnStation.toString() + "). Removing it now.");
-						mainSpawnStation = null;
-					} else if (!spawnStations.contains(mainSpawnStation)) {
-						// add to spawn stations list:
-						spawnStations.add(mainSpawnStation);
-					}
-
-				}
-
-				// save:
-				saveSpawnStations();
-			}
-		}, 1L);
-
-		// register listeners:
-		Bukkit.getServer().getPluginManager().registerEvents(this, this);
-
-		// load data for all online players:
-		for (Player player : Bukkit.getOnlinePlayers()) {
-			// get his player data, forcing it to initialize if we've never seen him before
-			dataStore.getPlayerData(player);
-		}
+		// teleport costs:
+		teleportCosts = config.getDouble("Teleport Costs", 0.0D);
+		config.set("Teleport Costs", teleportCosts);
 	}
 
 	@Override
 	public void onDisable() {
+		// reset teleport costs confirmations:
+		teleportCostConfirmations.clear();
+
+		// vault controller:
+		VaultController.disable();
+
 		instance = null;
 	}
 
@@ -239,13 +268,13 @@ public class HomeStations extends JavaPlugin implements Listener {
 	@Override
 	public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
 		if (!(sender instanceof Player)) {
-			sender.sendMessage("This command only be run as player.");
+			sender.sendMessage("This command can only be run as player.");
 			return true;
 		}
 
 		Player player = (Player) sender;
 		if (!player.hasPermission(PERMISSION_ADMIN)) {
-			player.sendMessage(dataStore.getMessage(Message.NoPermission));
+			Utils.sendMessage(player, dataStore.getMessage(Message.NoPermission));
 			return true;
 		}
 
@@ -253,26 +282,26 @@ public class HomeStations extends JavaPlugin implements Listener {
 			Location location = player.getLocation();
 			if (args[0].equalsIgnoreCase("setMainSpawn")) {
 				if (!this.isLowerStationButton(location.getBlock())) {
-					player.sendMessage(dataStore.getMessage(Message.ThisIsNoStation));
+					Utils.sendMessage(player, dataStore.getMessage(Message.ThisIsNoStation));
 					return true;
 				}
 				mainSpawnStation = new SoftBlockLocation(location);
 				// just in cases this wasn't already a spawn station before; set will make sure that it is only kept
 				// once:
 				spawnStations.add(mainSpawnStation);
-				player.sendMessage(dataStore.getMessage(Message.MainSpawnStationSet));
+				Utils.sendMessage(player, dataStore.getMessage(Message.MainSpawnStationSet));
 				this.saveSpawnStations();
 				return true;
 			} else if (args[0].equalsIgnoreCase("addSpawn")) {
 				if (!this.isLowerStationButton(location.getBlock())) {
-					player.sendMessage(dataStore.getMessage(Message.ThisIsNoStation));
+					Utils.sendMessage(player, dataStore.getMessage(Message.ThisIsNoStation));
 					return true;
 				}
 				SoftBlockLocation softLocation = new SoftBlockLocation(location);
 				// set will make sure that it is only kept once:
 				spawnStations.add(softLocation);
 
-				player.sendMessage(dataStore.getMessage(Message.SpawnStationAdded));
+				Utils.sendMessage(player, dataStore.getMessage(Message.SpawnStationAdded));
 				this.saveSpawnStations();
 				return true;
 			}
@@ -336,7 +365,7 @@ public class HomeStations extends JavaPlugin implements Listener {
 		try {
 			homesConfig.save(DataStore.homesFilePath);
 		} catch (IOException e) {
-			Log.severe("Unable to write to the configuration file at \"" + DataStore.homesFilePath + "\"");
+			this.getLogger().severe("Unable to write to the configuration file at \"" + DataStore.homesFilePath + "\"");
 		}
 	}
 
@@ -355,6 +384,7 @@ public class HomeStations extends JavaPlugin implements Listener {
 
 		// drop player data from memory
 		dataStore.clearCachedPlayerData(playerId);
+		teleportCostConfirmations.remove(playerId);
 	}
 
 	// when a player presses a button...
@@ -370,41 +400,48 @@ public class HomeStations extends JavaPlugin implements Listener {
 
 			if (this.isHigherStationButton(clicked)) {
 				if (!player.hasPermission(PERMISSION_USE)) {
-					player.sendMessage(dataStore.getMessage(Message.NoPermission));
+					Utils.sendMessage(player, dataStore.getMessage(Message.NoPermission));
 					return;
 				}
+				SoftBlockLocation currentStationLocation = new SoftBlockLocation(clicked.getLocation().subtract(0, 1, 0));
 
-				// teleport:
-				SoftBlockLocation currentSoftLocation = new SoftBlockLocation(clicked.getLocation().subtract(0, 1, 0));
 				// is spawn station?
-				if (spawnStations.contains(currentSoftLocation)) {
+				if (spawnStations.contains(currentStationLocation)) {
 					// teleport to home:
 					PlayerData playerData = dataStore.getPlayerData(player);
 					SoftBlockLocation homeLoc = playerData.homeLocation;
 					if (homeLoc == null) {
-						player.sendMessage(dataStore.getMessage(Message.NoHomeStationSet));
+						Utils.sendMessage(player, dataStore.getMessage(Message.NoHomeStationSet));
 						return;
 					}
 					Location location = homeLoc.getBukkitLocation();
 					BlockFace stationFacing = location != null ? this.getStationFaceForLowerStationButton(location.getBlock()) : null;
 
 					if (stationFacing == null) {
-						player.sendMessage(dataStore.getMessage(Message.HomeStationNotFound));
+						Utils.sendMessage(player, dataStore.getMessage(Message.HomeStationNotFound));
 						return;
 					}
 
+					// handle teleport costs:
+					if (!this.handleTeleportCost(player, currentStationLocation)) {
+						// failure
+						return;
+					}
+
+					// teleport:
+					Utils.sendMessage(player, dataStore.getMessage(Message.TeleportToHome));
 					this.teleport(player, player.getLocation(), location, stationFacing);
 				} else {
 					// teleport to spawn station:
 					PlayerData playerData = dataStore.getPlayerData(player);
 					SoftBlockLocation spawnLoc = playerData.spawnLocation;
 					if (spawnLoc == null) {
-						player.sendMessage(dataStore.getMessage(Message.NoSpawnStationSet));
+						Utils.sendMessage(player, dataStore.getMessage(Message.NoSpawnStationSet));
 						spawnLoc = mainSpawnStation;
 						// only print this message once, then automatically set the players spawn station:
 						playerData.spawnLocation = mainSpawnStation;
 						if (spawnLoc == null) {
-							player.sendMessage(dataStore.getMessage(Message.NoMainSpawnStationSet));
+							Utils.sendMessage(player, dataStore.getMessage(Message.NoMainSpawnStationSet));
 							return;
 						}
 					}
@@ -412,33 +449,87 @@ public class HomeStations extends JavaPlugin implements Listener {
 					BlockFace stationFacing = location != null ? this.getStationFaceForLowerStationButton(location.getBlock()) : null;
 
 					if (stationFacing == null) {
-						player.sendMessage(dataStore.getMessage(Message.SpawnStationNotFound));
+						Utils.sendMessage(player, dataStore.getMessage(Message.SpawnStationNotFound));
 						return;
 					}
 
+					// handle teleport costs:
+					if (!this.handleTeleportCost(player, currentStationLocation)) {
+						// failure
+						return;
+					}
+
+					// teleport:
+					Utils.sendMessage(player, dataStore.getMessage(Message.TeleportToSpawn));
 					this.teleport(player, player.getLocation(), location, stationFacing);
 				}
 			} else if (this.isLowerStationButton(clicked)) {
 				if (!player.hasPermission(PERMISSION_USE)) {
-					player.sendMessage(dataStore.getMessage(Message.NoPermission));
+					Utils.sendMessage(player, dataStore.getMessage(Message.NoPermission));
 					return;
 				}
+				SoftBlockLocation currentStationLocation = new SoftBlockLocation(clicked.getLocation());
 				PlayerData playerData = dataStore.getPlayerData(player);
-				SoftBlockLocation stationLocation = new SoftBlockLocation(clicked.getLocation());
+
 				// is spawn station?
-				if (spawnStations.contains(stationLocation)) {
+				if (spawnStations.contains(currentStationLocation)) {
 					// set spawn station:
-					playerData.spawnLocation = stationLocation;
-					player.sendMessage(dataStore.getMessage(Message.SpawnStationSet));
+					playerData.spawnLocation = currentStationLocation;
+					Utils.sendMessage(player, dataStore.getMessage(Message.SpawnStationSet));
 				} else {
 					// set home station:
-					playerData.homeLocation = stationLocation;
-					player.sendMessage(dataStore.getMessage(Message.HomeStationSet));
+					playerData.homeLocation = currentStationLocation;
+					Utils.sendMessage(player, dataStore.getMessage(Message.HomeStationSet));
 				}
 
 				dataStore.savePlayerData(player.getUniqueId(), playerData);
 			}
 		}
+	}
+
+	private boolean handleTeleportCost(Player player, SoftBlockLocation currentStationLocation) {
+		// handle teleport costs:
+		if (teleportCosts > 0.0D && VaultController.hasEconomy()) {
+			UUID playerId = player.getUniqueId();
+
+			// get and clear last confirmation request:
+			SoftBlockLocation confirmation = teleportCostConfirmations.remove(playerId);
+
+			// check balance:
+			double balance = VaultController.getBalance(player);
+			if (balance < teleportCosts) {
+				// not enough money:
+				Utils.sendMessage(player, dataStore.getMessage(Message.NotEnoughMoney,
+						"costs", VaultController.DECIMAL_FORMAT.format(teleportCosts),
+						"balance", VaultController.DECIMAL_FORMAT.format(balance)));
+				return false;
+			}
+
+			if (!currentStationLocation.equals(confirmation)) {
+				// request new confirmation:
+				teleportCostConfirmations.put(playerId, currentStationLocation);
+				Utils.sendMessage(player, dataStore.getMessage(Message.TeleportCostsConfirm,
+						"costs", VaultController.DECIMAL_FORMAT.format(teleportCosts)));
+				return false;
+			} else {
+				// withdraw money:
+				String error = VaultController.withdrawMoney(player, teleportCosts);
+				if (error != null) {
+					// transaction failure:
+					Utils.sendMessage(player, dataStore.getMessage(Message.TransactionFailure,
+							"error", error));
+					return false;
+				} else {
+					// transaction successful:
+					Utils.sendMessage(player, dataStore.getMessage(Message.TeleportCostsApplied,
+							"costs", VaultController.DECIMAL_FORMAT.format(teleportCosts),
+							"balance", VaultController.DECIMAL_FORMAT.format(balance)));
+				}
+			}
+		}
+
+		// proceed with teleport..
+		return true;
 	}
 
 	public void playUpEffectAt(final Location location, final double end) {
@@ -532,6 +623,5 @@ public class HomeStations extends JavaPlugin implements Listener {
 				playDownEffectAt(effectLocation, endDownEffect);
 			}
 		}, teleportDelay);
-
 	}
 }

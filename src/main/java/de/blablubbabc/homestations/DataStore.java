@@ -14,14 +14,15 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.logging.Logger;
 
 import org.bukkit.ChatColor;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 
-import de.blablubbabc.homestations.utils.Log;
 import de.blablubbabc.homestations.utils.SoftBlockLocation;
+import de.blablubbabc.homestations.utils.Utils;
 
 class DataStore {
 
@@ -31,13 +32,17 @@ class DataStore {
 	final static String homesFilePath = pluginFolderPath + File.separator + "homes.yml";
 	final static String playerDataFolderPath = pluginFolderPath + File.separator + "PlayerData";
 
+	private final Logger logger;
+
 	// in-memory cache for player data:
 	private final Map<UUID, PlayerData> playerIdToPlayerDataMap = new HashMap<UUID, PlayerData>();
 
 	// in-memory cache for messages:
 	private final Map<Message, String> messages = new EnumMap<Message, String>(Message.class);
 
-	DataStore() {
+	DataStore(Logger logger) {
+		this.logger = logger;
+
 		// load messages:
 		this.loadMessages();
 
@@ -186,7 +191,7 @@ class DataStore {
 			}
 		} catch (Exception e) {
 			// log if a problem occurs:
-			Log.severe("Unable to load player data from \"" + playerFile.getPath() + "\": " + e.getMessage());
+			logger.severe("Unable to load player data from \"" + playerFile.getPath() + "\": " + e.getMessage());
 		} finally {
 			if (inStream != null) {
 				try {
@@ -223,7 +228,7 @@ class DataStore {
 			outStream.newLine();
 		} catch (Exception e) {
 			// log if a problem occurs:
-			Log.severe("Unexpected exception saving data for player \"" + playerId + "\": " + e.getMessage());
+			logger.severe("Unexpected exception saving data for player \"" + playerId + "\": " + e.getMessage());
 		} finally {
 			// close the file:
 			if (outStream != null) {
@@ -277,6 +282,14 @@ class DataStore {
 		this.addDefault(defaults, Message.NoSpawnStationSet, "&cYou don't have a spawn station set yet! &6Selecting main spawn station now.", null);
 		this.addDefault(defaults, Message.SpawnStationNotFound, "&cYour spawn station does no longer exist!", null);
 		this.addDefault(defaults, Message.ThisIsNoStation, "&cThis is not a valid station!", null);
+
+		this.addDefault(defaults, Message.TeleportToHome, "&aTeleporting home...", null);
+		this.addDefault(defaults, Message.TeleportToSpawn, "&aTeleporting to spawn...", null);
+		this.addDefault(defaults, Message.NotEnoughMoney, "&cYou don't have enough money! Teleporting costs &e{costs}$&c, but you only have &e{balance}$&c.", null);
+		this.addDefault(defaults, Message.TransactionFailure, "&cSomething went wrong: {error}", null);
+		this.addDefault(defaults, Message.TeleportCostsConfirm, "&cTeleporting costs &e{costs}$&c! &aClick again to confirm.", null);
+		this.addDefault(defaults, Message.TeleportCostsApplied, "&aWithdrawn teleport costs of &e{costs}$&a. You have &e{balance}$ &aleft.", null);
+
 		this.addDefault(defaults, Message.NoPermission, "&cYou don't have the permission to do that!", null);
 
 		// load the message config file:
@@ -289,7 +302,7 @@ class DataStore {
 
 			// if default is missing, log an error and use some fake data for now so that the plugin can run:
 			if (messageData == null) {
-				Log.severe("Missing default message for '" + messageID.name() + "'.  Please contact the developer.");
+				logger.severe("Missing default message for '" + messageID.name() + "'.  Please contact the developer.");
 				messageData = new MessageData(messageID, "Missing message!  ID: " + messageID.name() + ".  Please contact a server admin.", null);
 			}
 
@@ -312,7 +325,7 @@ class DataStore {
 		try {
 			config.save(DataStore.messagesFilePath);
 		} catch (IOException exception) {
-			Log.severe("Unable to write to the configuration file at \"" + DataStore.messagesFilePath + "\"");
+			logger.severe("Unable to write to the configuration file at \"" + DataStore.messagesFilePath + "\"");
 		}
 
 		defaults.clear();
@@ -325,17 +338,13 @@ class DataStore {
 	}
 
 	// gets a message from memory
-	public String getMessage(Message messageID, String... args) {
+	public String getMessage(Message messageID, String... placeholders) {
 		String message = messages.get(messageID);
 		if (message == null) message = "ERROR:Missing message for '" + messageID + "'";
 
 		// replace placeholders:
-		if (args != null) {
-			for (int i = 0; i < args.length; i++) {
-				String param = args[i];
-				message = message.replace("{" + i + "}", param);
-			}
-		}
+		message = Utils.replacePlaceholders(message, placeholders);
+
 		return message;
 	}
 }
