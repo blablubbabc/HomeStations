@@ -4,16 +4,26 @@
  */
 package de.blablubbabc.homestations.utils;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.regex.Pattern;
+
 import org.bukkit.Bukkit;
 import org.bukkit.EntityEffect;
 import org.bukkit.FireworkEffect;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Firework;
-import org.bukkit.entity.Player;
 import org.bukkit.inventory.meta.FireworkMeta;
 
 public class Utils {
+
+	private static final Pattern NEW_LINE = Pattern.compile("\\r?(\\n|\\\\n)");
+
+	public static List<String> getLines(String text) {
+		return Arrays.asList(NEW_LINE.split(text, -1));
+	}
 
 	public static String replacePlaceholders(String message, String... placeholders) {
 		if (message != null && placeholders != null) {
@@ -29,11 +39,13 @@ public class Utils {
 		return message.replace("{" + placeholder + "}", value);
 	}
 
-	public static void sendMessage(Player player, String message) {
-		if (player == null) return;
+	public static void sendMessage(CommandSender recipient, String message) {
+		if (recipient == null) return;
 		if (message == null || message.isEmpty()) return;
 
-		player.sendMessage(message);
+		for (String line : getLines(message)) {
+			recipient.sendMessage(line);
+		}
 	}
 
 	public static void playFireworkEffect(Location loc, FireworkEffect effect) {
