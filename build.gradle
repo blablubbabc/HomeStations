@@ -52,7 +52,9 @@ repositories {
 
 dependencies {
 	compile 'org.bukkit:bukkit:1.9.4-R0.1-SNAPSHOT'
-	compile 'net.milkbowl.vault:VaultAPI:1.6'
+	compile ('net.milkbowl.vault:VaultAPI:1.6') {
+		transitive = false
+	}
 }
 
 jar {
