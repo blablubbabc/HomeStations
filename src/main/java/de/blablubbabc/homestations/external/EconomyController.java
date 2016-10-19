@@ -38,19 +38,18 @@ public class EconomyController {
 
 		@EventHandler
 		public void onServiceRegister(ServiceRegisterEvent event) {
-			if (!findVaultEconomy()) return;
-			RegisteredServiceProvider<?> serviceProvider = event.getProvider();
-			if (serviceProvider.getService() == Economy.class) {
-				// update:
-				setupEconomy();
-			}
+			Class<?> service = event.getProvider().getService();
+			this.updateService(service);
 		}
 
 		@EventHandler
 		public void onServiceUnregister(ServiceUnregisterEvent event) {
-			if (!findVaultEconomy()) return;
-			RegisteredServiceProvider<?> serviceProvider = event.getProvider();
-			if (serviceProvider.getService() == Economy.class) {
+			Class<?> service = event.getProvider().getService();
+			this.updateService(service);
+		}
+
+		private void updateService(Class<?> service) {
+			if (findVaultEconomy() && service == Economy.class) {
 				// update:
 				setupEconomy();
 			}
@@ -155,12 +154,12 @@ public class EconomyController {
 	}
 
 	protected String getNoEconomyServiceFoundMessage() {
-		return "No economy service detected. Additional vault economy features disabled.";
+		return "No vault economy service detected. Additional vault economy features disabled.";
 	}
 
 	protected String getEconomyServiceFoundMessage(Economy economy) {
 		assert economy != null;
-		return "Found economy service: " + economy.getName();
+		return "Found vault economy service: " + economy.getName();
 	}
 
 	protected void setupEconomy() {
@@ -198,7 +197,7 @@ public class EconomyController {
 		economy = null;
 	}
 
-	protected Economy getEconomy() {
+	public Economy getEconomy() {
 		return economy;
 	}
 
@@ -280,7 +279,8 @@ public class EconomyController {
 		if (player == null) {
 			throw new IllegalArgumentException("Player is null!");
 		}
-		if (addAmount <= 0.0D) return "Cannot deposit a negative amount.";
+		if (addAmount == 0.0D) return null;
+		if (addAmount < 0.0D) return "Cannot deposit a negative amount.";
 
 		EconomyResponse response = this.getEconomy().depositPlayer(player, addAmount);
 		return this.getErrorMessage(response);
@@ -304,13 +304,14 @@ public class EconomyController {
 		if (player == null) {
 			throw new IllegalArgumentException("Player is null!");
 		}
+		if (withdrawAmount == 0.0D) return null;
 		if (withdrawAmount <= 0.0D) return "Cannot withdraw a negative amount.";
 
 		EconomyResponse response = this.getEconomy().withdrawPlayer(player, withdrawAmount);
 		return this.getErrorMessage(response);
 	}
 
-	private String getErrorMessage(EconomyResponse response) {
+	public String getErrorMessage(EconomyResponse response) {
 		if (response.transactionSuccess()) {
 			return null;
 		} else {
