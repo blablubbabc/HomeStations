@@ -11,6 +11,7 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
+import org.bukkit.event.server.PluginDisableEvent;
 import org.bukkit.event.server.ServiceRegisterEvent;
 import org.bukkit.event.server.ServiceUnregisterEvent;
 import org.bukkit.plugin.Plugin;
@@ -20,20 +21,24 @@ import net.milkbowl.vault.economy.Economy;
 import net.milkbowl.vault.economy.EconomyResponse;
 import net.milkbowl.vault.economy.EconomyResponse.ResponseType;
 
-public class VaultController {
+public class EconomyController {
 
-	private VaultController() {
-	}
-
-	private static class PluginListener implements Listener {
+	private class PluginListener implements Listener {
 
 		private PluginListener() {
+		}
+
+		// in case the controller wasn't properly shutdown already:
+		@EventHandler
+		public void onPluginDisable(PluginDisableEvent event) {
+			if (event.getPlugin().equals(plugin)) {
+				disable();
+			}
 		}
 
 		@EventHandler
 		public void onServiceRegister(ServiceRegisterEvent event) {
 			if (!findVaultEconomy()) return;
-
 			RegisteredServiceProvider<?> serviceProvider = event.getProvider();
 			if (serviceProvider.getService() == Economy.class) {
 				// update:
@@ -44,7 +49,6 @@ public class VaultController {
 		@EventHandler
 		public void onServiceUnregister(ServiceUnregisterEvent event) {
 			if (!findVaultEconomy()) return;
-
 			RegisteredServiceProvider<?> serviceProvider = event.getProvider();
 			if (serviceProvider.getService() == Economy.class) {
 				// update:
@@ -53,71 +57,91 @@ public class VaultController {
 		}
 	}
 
-	public static final String PLUGIN_NAME = "Vault";
-	public static final DecimalFormat DECIMAL_FORMAT = new DecimalFormat("0.0#");
+	protected final DecimalFormat DECIMAL_FORMAT = new DecimalFormat("0.0#");
 
-	private static final PluginListener pluginListener = new PluginListener();
-	private static Plugin plugin = null; // the main plugin
+	private PluginListener pluginListener = new PluginListener();
+	private Plugin plugin;
 
-	public static boolean isEnabled() {
-		return plugin != null;
+	public EconomyController() {
 	}
 
-	public static void enable(Plugin mainPlugin) {
-		if (mainPlugin == null || !mainPlugin.isEnabled()) {
+	/**
+	 * Has to be called before using the controller.
+	 * 
+	 * <p>
+	 * The controller has to be disabled again via {@link #disable()} when the plugin gets disabled. Otherwise the
+	 * controller will disable itself automatically afterwards in order to perform proper cleanup.
+	 * </p>
+	 * 
+	 * @param plugin
+	 *            the plugin
+	 */
+	public void enable(Plugin plugin) {
+		if (plugin == null) {
+			throw new IllegalArgumentException("Plugin is null!");
+		}
+		if (!plugin.isEnabled()) {
 			throw new IllegalArgumentException("Plugin is not enabled!");
 		}
-		if (isEnabled()) {
-			// disable first:
-			disable();
-		}
-		mainPlugin.getLogger().info("Enabling controller for plugin '" + PLUGIN_NAME + "'.");
+		this.plugin = plugin;
 
-		// enable:
-		plugin = mainPlugin;
+		// register listener:
 		plugin.getServer().getPluginManager().registerEvents(pluginListener, plugin);
 
 		// setup:
-		setup();
+		this.setup();
 	}
 
-	public static void disable() {
-		if (!isEnabled()) return;
-		plugin.getLogger().info("Disabling controller for plugin '" + PLUGIN_NAME + "'");
-
+	/**
+	 * Disables the controller.
+	 * 
+	 * <p>
+	 * Has to be called when the plugin gets disabled. Otherwise the controller will disable itself automatically
+	 * afterwards in order to perform proper cleanup. The controller should not be used while disabled.
+	 * </p>
+	 */
+	public void disable() {
 		// cleanup:
-		cleanup();
+		this.cleanup();
 
-		// disable:
+		// unregister listener:
 		HandlerList.unregisterAll(pluginListener);
-		plugin = null;
 	}
 
-	// ////////
-
-	public static Plugin getPlugin() {
-		return Bukkit.getPluginManager().getPlugin(PLUGIN_NAME);
+	/**
+	 * Checks if the controller is enabled and can therefore be used.
+	 * 
+	 * @return <code>true</code> if enabled
+	 */
+	public boolean isEnabled() {
+		return plugin != null;
 	}
 
-	public static boolean isPluginEnabled() {
-		Plugin plugin = getPlugin();
-		return plugin != null && plugin.isEnabled();
+	protected final void validateIsEnabled() {
+		if (!this.isEnabled()) {
+			throw new IllegalStateException("Controller is currently disabled!");
+		}
 	}
 
-	private static void setup() {
+	protected final Plugin getPlugin() {
+		return plugin;
+	}
+
+	protected void setup() {
 		// setup economy:
-		setupEconomy();
+		this.setupEconomy();
 	}
 
-	private static void cleanup() {
-		cleanupEconomy();
+	protected void cleanup() {
+		// cleanup economy:
+		this.cleanupEconomy();
 	}
 
 	// ECONOMY:
 
-	private static Economy economy = null;
+	private Economy economy = null;
 
-	private static boolean findVaultEconomy() {
+	protected boolean findVaultEconomy() {
 		try {
 			Class.forName("net.milkbowl.vault.economy.Economy");
 			return true;
@@ -126,13 +150,29 @@ public class VaultController {
 		}
 	}
 
-	private static void setupEconomy() {
+	protected String getNoEconomyFoundMessage() {
+		return "Could not find vault economy. Additional vault economy features disabled.";
+	}
+
+	protected String getNoEconomyServiceFoundMessage() {
+		return "No economy service detected. Additional vault economy features disabled.";
+	}
+
+	protected String getEconomyServiceFoundMessage(Economy economy) {
+		assert economy != null;
+		return "Found economy service: " + economy.getName();
+	}
+
+	protected void setupEconomy() {
 		// cleanup:
-		cleanupEconomy();
+		this.cleanupEconomy();
 
 		// check if vault economy is available:
-		if (!findVaultEconomy()) {
-			plugin.getLogger().info("Could not find vault economy. Additional vault economy features disabled.");
+		if (!this.findVaultEconomy()) {
+			String message = this.getNoEconomyFoundMessage();
+			if (message != null && !message.isEmpty()) {
+				plugin.getLogger().info(message);
+			}
 			return;
 		}
 
@@ -142,26 +182,54 @@ public class VaultController {
 			economy = economyService.getProvider();
 		}
 		if (economy == null) {
-			plugin.getLogger().info("No economy service detected. Additional vault economy features disabled.");
+			String message = this.getNoEconomyServiceFoundMessage();
+			if (message != null && !message.isEmpty()) {
+				plugin.getLogger().info(message);
+			}
 		} else {
-			plugin.getLogger().info("Found economy service: " + economy.getName());
+			String message = this.getEconomyServiceFoundMessage(economy);
+			if (message != null && !message.isEmpty()) {
+				plugin.getLogger().info(message);
+			}
 		}
 	}
 
-	private static void cleanupEconomy() {
+	protected void cleanupEconomy() {
 		economy = null;
 	}
 
-	// ///
-
-	public static boolean hasEconomy() {
-		return economy != null;
+	protected Economy getEconomy() {
+		return economy;
 	}
 
-	private static void validateHasEconomy() {
-		if (!hasEconomy()) {
+	/**
+	 * Checks if an economy is available.
+	 * 
+	 * <p>
+	 * This might have to be checked before attempting to use any economy related functions.
+	 * </p>
+	 * 
+	 * @return <code>true</code> if an economy is available
+	 */
+	public boolean hasEconomy() {
+		return economy != null && economy.isEnabled();
+	}
+
+	private void validateHasEconomy() {
+		if (!this.hasEconomy()) {
 			throw new IllegalArgumentException("No economy available!");
 		}
+	}
+
+	/**
+	 * Formats the given balance value.
+	 * 
+	 * @param value
+	 *            the balance
+	 * @return the formatted value
+	 */
+	public String formatBalance(double value) {
+		return DECIMAL_FORMAT.format(value);
 	}
 
 	/**
@@ -179,18 +247,18 @@ public class VaultController {
 	 *            whether to withdraw partial amount if the player's balance isn't large enough
 	 * @return an error message, or <code>null</code> on success
 	 */
-	public static String applyChange(OfflinePlayer player, double deltaAmount, boolean withdrawPartial) {
+	public String applyChange(OfflinePlayer player, double deltaAmount, boolean withdrawPartial) {
 		if (deltaAmount == 0.0D) return null;
 		if (deltaAmount > 0.0D) {
-			return depositMoney(player, deltaAmount);
+			return this.depositMoney(player, deltaAmount);
 		} else {
 			deltaAmount = -deltaAmount;
-			double balance = getBalance(player);
+			double balance = this.getBalance(player);
 			if (balance < deltaAmount) {
 				if (withdrawPartial) deltaAmount = balance;
 				else return "Not enough money.";
 			}
-			return withdrawMoney(player, deltaAmount);
+			return this.withdrawMoney(player, deltaAmount);
 		}
 	}
 
@@ -207,15 +275,15 @@ public class VaultController {
 	 *            the amount of money, has to be positive
 	 * @return an error message, or <code>null</code> on success
 	 */
-	public static String depositMoney(OfflinePlayer player, double addAmount) {
-		validateHasEconomy();
+	public String depositMoney(OfflinePlayer player, double addAmount) {
+		this.validateHasEconomy();
 		if (player == null) {
 			throw new IllegalArgumentException("Player is null!");
 		}
 		if (addAmount <= 0.0D) return "Cannot deposit a negative amount.";
 
-		EconomyResponse response = economy.depositPlayer(player, addAmount);
-		return getErrorMessage(response);
+		EconomyResponse response = this.getEconomy().depositPlayer(player, addAmount);
+		return this.getErrorMessage(response);
 	}
 
 	/**
@@ -231,18 +299,18 @@ public class VaultController {
 	 *            the amount of money, has to be positive
 	 * @return an error message, or <code>null</code> on success
 	 */
-	public static String withdrawMoney(OfflinePlayer player, double withdrawAmount) {
-		validateHasEconomy();
+	public String withdrawMoney(OfflinePlayer player, double withdrawAmount) {
+		this.validateHasEconomy();
 		if (player == null) {
 			throw new IllegalArgumentException("Player is null!");
 		}
 		if (withdrawAmount <= 0.0D) return "Cannot withdraw a negative amount.";
 
-		EconomyResponse response = economy.withdrawPlayer(player, withdrawAmount);
-		return getErrorMessage(response);
+		EconomyResponse response = this.getEconomy().withdrawPlayer(player, withdrawAmount);
+		return this.getErrorMessage(response);
 	}
 
-	private static String getErrorMessage(EconomyResponse response) {
+	private String getErrorMessage(EconomyResponse response) {
 		if (response.transactionSuccess()) {
 			return null;
 		} else {
@@ -270,12 +338,12 @@ public class VaultController {
 	 *            the player
 	 * @return the amount of money the player currently has
 	 */
-	public static double getBalance(OfflinePlayer player) {
-		validateHasEconomy();
+	public double getBalance(OfflinePlayer player) {
+		this.validateHasEconomy();
 		if (player == null) {
 			throw new IllegalArgumentException("Player is null!");
 		}
 
-		return economy.getBalance(player);
+		return this.getEconomy().getBalance(player);
 	}
 }

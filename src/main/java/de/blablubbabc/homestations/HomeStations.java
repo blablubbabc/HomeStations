@@ -40,7 +40,7 @@ import org.bukkit.material.Button;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.Vector;
 
-import de.blablubbabc.homestations.external.VaultController;
+import de.blablubbabc.homestations.external.EconomyController;
 import de.blablubbabc.homestations.utils.SoftBlockLocation;
 import de.blablubbabc.homestations.utils.Utils;
 
@@ -76,6 +76,7 @@ public class HomeStations extends JavaPlugin implements Listener {
 
 	private double teleportCosts;
 
+	private final EconomyController economyController = new EconomyController();
 	private final Map<UUID, SoftBlockLocation> teleportCostConfirmations = new HashMap<UUID, SoftBlockLocation>();
 
 	@Override
@@ -132,8 +133,8 @@ public class HomeStations extends JavaPlugin implements Listener {
 		// register listeners:
 		Bukkit.getServer().getPluginManager().registerEvents(this, this);
 
-		// vault controller:
-		VaultController.enable(this);
+		// economy controller:
+		economyController.enable(this);
 
 		// load data for all online players:
 		for (Player player : Bukkit.getOnlinePlayers()) {
@@ -199,8 +200,8 @@ public class HomeStations extends JavaPlugin implements Listener {
 		// reset teleport costs confirmations:
 		teleportCostConfirmations.clear();
 
-		// vault controller:
-		VaultController.disable();
+		// economy controller:
+		economyController.disable();
 
 		instance = null;
 	}
@@ -489,26 +490,26 @@ public class HomeStations extends JavaPlugin implements Listener {
 
 	private boolean handleTeleportCost(Player player, SoftBlockLocation currentStationLocation) {
 		// handle teleport costs:
-		if (teleportCosts != 0.0D && VaultController.hasEconomy()) {
+		if (teleportCosts != 0.0D && economyController.hasEconomy()) {
 			UUID playerId = player.getUniqueId();
 
 			// get and clear last confirmation request:
 			SoftBlockLocation confirmation = teleportCostConfirmations.remove(playerId);
 
 			// check balance:
-			double balance = VaultController.getBalance(player);
+			double balance = economyController.getBalance(player);
 			if (teleportCosts > 0.0D && balance < teleportCosts) {
 				// not enough money:
 				Utils.sendMessage(player, dataStore.getMessage(Message.NotEnoughMoney,
-						"costs", VaultController.DECIMAL_FORMAT.format(Math.abs(teleportCosts)),
-						"balance", VaultController.DECIMAL_FORMAT.format(balance)));
+						"costs", economyController.formatBalance(Math.abs(teleportCosts)),
+						"balance", economyController.formatBalance(balance)));
 				return false;
 			}
 
 			// no confirmation required if message is empty:
 			String confirmMessage = dataStore.getMessage(Message.TeleportCostsConfirm,
-					"costs", VaultController.DECIMAL_FORMAT.format(Math.abs(teleportCosts)),
-					"balance", VaultController.DECIMAL_FORMAT.format(balance));
+					"costs", economyController.formatBalance(Math.abs(teleportCosts)),
+					"balance", economyController.formatBalance(balance));
 			if (!currentStationLocation.equals(confirmation) && !confirmMessage.isEmpty()) {
 				// request new confirmation:
 				teleportCostConfirmations.put(playerId, currentStationLocation);
@@ -516,7 +517,7 @@ public class HomeStations extends JavaPlugin implements Listener {
 				return false;
 			} else {
 				// update balance:
-				String error = VaultController.applyChange(player, -teleportCosts, false);
+				String error = economyController.applyChange(player, -teleportCosts, false);
 				if (error != null) {
 					// transaction failure:
 					Utils.sendMessage(player, dataStore.getMessage(Message.TransactionFailure,
@@ -524,10 +525,10 @@ public class HomeStations extends JavaPlugin implements Listener {
 					return false;
 				} else {
 					// transaction successful:
-					balance = VaultController.getBalance(player); // new balance
+					balance = economyController.getBalance(player); // new balance
 					Utils.sendMessage(player, dataStore.getMessage(Message.TeleportCostsApplied,
-							"costs", VaultController.DECIMAL_FORMAT.format(Math.abs(teleportCosts)),
-							"balance", VaultController.DECIMAL_FORMAT.format(balance)));
+							"costs", economyController.formatBalance(Math.abs(teleportCosts)),
+							"balance", economyController.formatBalance(balance)));
 				}
 			}
 		}
