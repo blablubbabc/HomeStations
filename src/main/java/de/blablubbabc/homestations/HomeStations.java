@@ -77,7 +77,7 @@ public class HomeStations extends JavaPlugin implements Listener {
 	private double teleportCosts;
 
 	private final EconomyController economyController = new EconomyController();
-	private final Map<UUID, SoftBlockLocation> teleportCostConfirmations = new HashMap<UUID, SoftBlockLocation>();
+	private final Map<UUID, SoftBlockLocation> teleportCostConfirmations = new HashMap<>();
 
 	@Override
 	public void onEnable() {
@@ -94,7 +94,7 @@ public class HomeStations extends JavaPlugin implements Listener {
 
 		// load spawn stations locations:
 		homesConfig = YamlConfiguration.loadConfiguration(new File(DataStore.homesFilePath));
-		spawnStations = new HashSet<SoftBlockLocation>(SoftBlockLocation.getFromStringList(homesConfig.getStringList("Homes.Spawn Stations")));
+		spawnStations = new HashSet<>(SoftBlockLocation.getFromStringList(homesConfig.getStringList("Homes.Spawn Stations")));
 		mainSpawnStation = SoftBlockLocation.getFromString(homesConfig.getString("Homes.Main Spawn Station"));
 
 		Bukkit.getServer().getScheduler().runTaskLater(this, new Runnable() {
@@ -231,7 +231,7 @@ public class HomeStations extends JavaPlugin implements Listener {
 	}
 
 	private static List<Color> getColorList(List<String> stringList) {
-		List<Color> colors = new ArrayList<Color>();
+		List<Color> colors = new ArrayList<>();
 		if (stringList != null) {
 			for (String string : stringList) {
 				if (string == null) continue;
@@ -255,7 +255,7 @@ public class HomeStations extends JavaPlugin implements Listener {
 	}
 
 	private static List<String> getStringList(List<Color> colorList) {
-		List<String> strings = new ArrayList<String>();
+		List<String> strings = new ArrayList<>();
 		if (colorList != null) {
 			for (Color color : colorList) {
 				if (color == null) continue;

@@ -35,10 +35,10 @@ class DataStore {
 	private final Logger logger;
 
 	// in-memory cache for player data:
-	private final Map<UUID, PlayerData> playerIdToPlayerDataMap = new HashMap<UUID, PlayerData>();
+	private final Map<UUID, PlayerData> playerIdToPlayerDataMap = new HashMap<>();
 
 	// in-memory cache for messages:
-	private final Map<Message, String> messages = new EnumMap<Message, String>(Message.class);
+	private final Map<Message, String> messages = new EnumMap<>(Message.class);
 
 	DataStore(Logger logger) {
 		this.logger = logger;
@@ -271,7 +271,7 @@ class DataStore {
 	// loads user-facing messages from the messages.yml configuration file into memory
 	private void loadMessages() {
 		// initialize defaults:
-		Map<Message, String> defaults = new EnumMap<Message, String>(Message.class);
+		Map<Message, String> defaults = new EnumMap<>(Message.class);
 		defaults.put(Message.SpawnStationAdded, "&aA &espawn station &awas added!");
 		defaults.put(Message.MainSpawnStationSet, "&aThe &emain spawn station &awas set!");
 		defaults.put(Message.NoMainSpawnStationSet, "&cThere is no valid &emain spawn station &cset yet!");

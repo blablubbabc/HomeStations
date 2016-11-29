@@ -117,7 +117,7 @@ public class SoftBlockLocation {
 	// statics
 
 	public static List<SoftBlockLocation> getFromStringList(Collection<String> strings) {
-		List<SoftBlockLocation> softLocs = new ArrayList<SoftBlockLocation>();
+		List<SoftBlockLocation> softLocs = new ArrayList<>();
 		for (String s : strings) {
 			SoftBlockLocation soft = getFromString(s);
 			if (soft != null) softLocs.add(soft);
@@ -126,7 +126,7 @@ public class SoftBlockLocation {
 	}
 
 	public static List<String> toStringList(Collection<SoftBlockLocation> softLocs) {
-		List<String> strings = new ArrayList<String>();
+		List<String> strings = new ArrayList<>();
 		for (SoftBlockLocation soft : softLocs) {
 			if (soft != null) strings.add(soft.toString());
 		}
