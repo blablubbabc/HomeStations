@@ -275,9 +275,11 @@ class DataStore {
 		defaults.put(Message.SpawnStationAdded, "&aA &espawn station &awas added!");
 		defaults.put(Message.MainSpawnStationSet, "&aThe &emain spawn station &awas set!");
 		defaults.put(Message.NoMainSpawnStationSet, "&cThere is no valid &emain spawn station &cset yet!");
+		defaults.put(Message.HomeStationSetConfirm, "&cYou are about to &eset your home station&c! &6Click again to confirm.");
 		defaults.put(Message.HomeStationSet, "&aYou have set your &ehome station&a!\\n&aYou will teleport here every time you trigger the top button of a &espawn station&a.");
 		defaults.put(Message.NoHomeStationSet, "&cYou don't have a &ehome station &cset yet!");
 		defaults.put(Message.HomeStationNotFound, "&cYour &ehome station &cdoes no longer exist!");
+		defaults.put(Message.SpawnStationSetConfirm, "&cYou are about to &eset your spawn station&c! &6Click again to confirm.");
 		defaults.put(Message.SpawnStationSet, "&aYou have set your &espawn station&a!\\n&aYou will teleport here every time you trigger the top button of a &ehome station&a.");
 		defaults.put(Message.NoSpawnStationSet, "&cYou don't have a &espawn station &cset yet! &6Selecting the &emain spawn station &6for you.");
 		defaults.put(Message.SpawnStationNotFound, "&cYour &espawn station &cdoes no longer exist!");

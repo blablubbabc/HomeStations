@@ -77,7 +77,8 @@ public class HomeStations extends JavaPlugin implements Listener {
 	private double teleportCosts;
 
 	private final EconomyController economyController = new EconomyController();
-	private final Map<UUID, SoftBlockLocation> teleportCostConfirmations = new HashMap<>();
+	// playerUUID -> request
+	private final Map<UUID, ConfirmationRequest> confirmationRequests = new HashMap<>();
 
 	@Override
 	public void onEnable() {
@@ -142,8 +143,8 @@ public class HomeStations extends JavaPlugin implements Listener {
 			dataStore.getPlayerData(player);
 		}
 
-		// reset teleport cost confirmations, just in case:
-		teleportCostConfirmations.clear();
+		// reset confirmation requests, just in case:
+		confirmationRequests.clear();
 	}
 
 	// loads the config and writes back loaded (defaults and corrected) values
@@ -197,8 +198,8 @@ public class HomeStations extends JavaPlugin implements Listener {
 
 	@Override
 	public void onDisable() {
-		// reset teleport costs confirmations:
-		teleportCostConfirmations.clear();
+		// reset confirmation requests:
+		confirmationRequests.clear();
 
 		// economy controller:
 		economyController.disable();
@@ -290,7 +291,14 @@ public class HomeStations extends JavaPlugin implements Listener {
 				// just in cases this wasn't already a spawn station before; set will make sure that it is only kept
 				// once:
 				spawnStations.add(mainSpawnStation);
+
+				// cleanup affected confirmation requests:
+				this.removeAffectedConfirmationRequests(mainSpawnStation);
+
+				// message:
 				Utils.sendMessage(player, dataStore.getMessage(Message.MainSpawnStationSet));
+
+				// save:
 				this.saveSpawnStations();
 				return true;
 			} else if (args[0].equalsIgnoreCase("addSpawn")) {
@@ -298,11 +306,17 @@ public class HomeStations extends JavaPlugin implements Listener {
 					Utils.sendMessage(player, dataStore.getMessage(Message.ThisIsNoStation));
 					return true;
 				}
-				SoftBlockLocation softLocation = new SoftBlockLocation(location);
+				SoftBlockLocation spawnStationLocation = new SoftBlockLocation(location);
 				// set will make sure that it is only kept once:
-				spawnStations.add(softLocation);
+				spawnStations.add(spawnStationLocation);
 
+				// cleanup affected confirmation requests:
+				this.removeAffectedConfirmationRequests(spawnStationLocation);
+
+				// message:
 				Utils.sendMessage(player, dataStore.getMessage(Message.SpawnStationAdded));
+
+				// save:
 				this.saveSpawnStations();
 				return true;
 			}
@@ -385,7 +399,7 @@ public class HomeStations extends JavaPlugin implements Listener {
 
 		// drop player data from memory
 		dataStore.clearCachedPlayerData(playerId);
-		teleportCostConfirmations.remove(playerId);
+		confirmationRequests.remove(playerId);
 	}
 
 	// when a player presses a button...
@@ -471,13 +485,34 @@ public class HomeStations extends JavaPlugin implements Listener {
 				}
 				SoftBlockLocation currentStationLocation = new SoftBlockLocation(clicked.getLocation());
 				PlayerData playerData = dataStore.getPlayerData(player);
+				// get and remove last confirmation request:
+				UUID playerId = player.getUniqueId();
+				ConfirmationRequest confirmation = confirmationRequests.remove(playerId);
 
 				// is spawn station?
 				if (spawnStations.contains(currentStationLocation)) {
+					// no confirmation required if message is empty:
+					String confirmationMessage = dataStore.getMessage(Message.SpawnStationSetConfirm);
+					if (confirmation == null || !confirmation.applies(ConfirmationRequest.Type.SetStation, currentStationLocation) || confirmationMessage.isEmpty()) {
+						// request new confirmation:
+						confirmationRequests.put(playerId, new ConfirmationRequest(ConfirmationRequest.Type.SetStation, currentStationLocation));
+						Utils.sendMessage(player, confirmationMessage);
+						return;
+					}
+
 					// set spawn station:
 					playerData.spawnLocation = currentStationLocation;
 					Utils.sendMessage(player, dataStore.getMessage(Message.SpawnStationSet));
-				} else {
+				} else { // home station:
+					// no confirmation required if message is empty:
+					String confirmationMessage = dataStore.getMessage(Message.HomeStationSetConfirm);
+					if (confirmation == null || !confirmation.applies(ConfirmationRequest.Type.SetStation, currentStationLocation) || confirmationMessage.isEmpty()) {
+						// request new confirmation:
+						confirmationRequests.put(playerId, new ConfirmationRequest(ConfirmationRequest.Type.SetStation, currentStationLocation));
+						Utils.sendMessage(player, confirmationMessage);
+						return;
+					}
+
 					// set home station:
 					playerData.homeLocation = currentStationLocation;
 					Utils.sendMessage(player, dataStore.getMessage(Message.HomeStationSet));
@@ -493,8 +528,8 @@ public class HomeStations extends JavaPlugin implements Listener {
 		if (teleportCosts != 0.0D && economyController.hasEconomy()) {
 			UUID playerId = player.getUniqueId();
 
-			// get and clear last confirmation request:
-			SoftBlockLocation confirmation = teleportCostConfirmations.remove(playerId);
+			// get and remove last confirmation request:
+			ConfirmationRequest confirmation = confirmationRequests.remove(playerId);
 
 			// check balance:
 			double balance = economyController.getBalance(player);
@@ -507,13 +542,13 @@ public class HomeStations extends JavaPlugin implements Listener {
 			}
 
 			// no confirmation required if message is empty:
-			String confirmMessage = dataStore.getMessage(Message.TeleportCostsConfirm,
+			String confirmationMessage = dataStore.getMessage(Message.TeleportCostsConfirm,
 					"costs", economyController.formatBalance(Math.abs(teleportCosts)),
 					"balance", economyController.formatBalance(balance));
-			if (!currentStationLocation.equals(confirmation) && !confirmMessage.isEmpty()) {
+			if (confirmation == null || !confirmation.applies(ConfirmationRequest.Type.TeleportCost, currentStationLocation) || confirmationMessage.isEmpty()) {
 				// request new confirmation:
-				teleportCostConfirmations.put(playerId, currentStationLocation);
-				Utils.sendMessage(player, confirmMessage);
+				confirmationRequests.put(playerId, new ConfirmationRequest(ConfirmationRequest.Type.TeleportCost, currentStationLocation));
+				Utils.sendMessage(player, confirmationMessage);
 				return false;
 			} else {
 				// update balance:
@@ -628,5 +663,64 @@ public class HomeStations extends JavaPlugin implements Listener {
 				playDownEffectAt(effectLocation, endDownEffect);
 			}
 		}, teleportDelay);
+	}
+
+	public void removeAffectedConfirmationRequests(SoftBlockLocation affectedStationLocation) {
+		assert affectedStationLocation != null;
+		Iterator<ConfirmationRequest> confirmations = confirmationRequests.values().iterator();
+		while (confirmations.hasNext()) {
+			ConfirmationRequest confirmation = confirmations.next();
+			if (affectedStationLocation.equals(confirmation.getAffectedStationLocation())) {
+				confirmations.remove();
+			}
+		}
+	}
+
+	public static class ConfirmationRequest {
+
+		public static final int DEFAULT_DURATION_SECONDS = 20;
+
+		public enum Type {
+			TeleportCost,
+			SetStation;
+		}
+
+		private final Type type;
+		private final SoftBlockLocation affectedStationLocation;
+		private final long expiration;
+
+		public ConfirmationRequest(Type type, SoftBlockLocation affectedStationLocation) {
+			this(type, affectedStationLocation, DEFAULT_DURATION_SECONDS);
+		}
+
+		public ConfirmationRequest(Type type, SoftBlockLocation affectedStationLocation, int durationInSeconds) {
+			this.type = type;
+			this.affectedStationLocation = affectedStationLocation;
+			this.expiration = System.currentTimeMillis() + durationInSeconds * 1000L;
+		}
+
+		public Type getType() {
+			return type;
+		}
+
+		public SoftBlockLocation getAffectedStationLocation() {
+			return affectedStationLocation;
+		}
+
+		public boolean isExpired() {
+			// Note: Depending on changes to the local system time, the confirmation request might not expire in time,
+			// or expire instantly. However, the expiration state is not that important that changes to the system time
+			// would need to be handled.
+			return expiration < System.currentTimeMillis();
+		}
+
+		public boolean matches(Type type, SoftBlockLocation affectedStationLocation) {
+			return this.type.equals(type) && this.affectedStationLocation.equals(affectedStationLocation);
+		}
+
+		// matches and is not expired
+		public boolean applies(Type type, SoftBlockLocation affectedStationLocation) {
+			return this.matches(type, affectedStationLocation) && !this.isExpired();
+		}
 	}
 }
