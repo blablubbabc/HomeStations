@@ -50,11 +50,12 @@ public class Utils {
 
 	public static void playFireworkEffect(Location loc, FireworkEffect effect) {
 		// spawn firework entity:
-		Firework firework = loc.getWorld().spawn(loc, Firework.class);
-		// apply given firework effect:
-		FireworkMeta fireworkMeta = firework.getFireworkMeta();
-		fireworkMeta.addEffect(effect);
-		firework.setFireworkMeta(fireworkMeta);
+		Firework firework = loc.getWorld().spawn(loc, Firework.class, fireworkEntity -> {
+			// apply given firework effect prior to spawning:
+			FireworkMeta fireworkMeta = fireworkEntity.getFireworkMeta();
+			fireworkMeta.addEffect(effect);
+			fireworkEntity.setFireworkMeta(fireworkMeta);
+		});
 		// play firework explosion effect:
 		firework.playEffect(EntityEffect.FIREWORK_EXPLODE);
 		// remove firework entity again (before it ticks and plays launching effects):
