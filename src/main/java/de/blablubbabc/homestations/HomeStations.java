@@ -176,7 +176,7 @@ public class HomeStations extends JavaPlugin implements Listener {
 		config.set("Upward.Teleport.Delay in Ticks", teleportDelay);
 
 		// max teleport effect range:
-		maxUpEffectRange = config.getDouble("Upward.Effect.Maximum Range", 255.0D);
+		maxUpEffectRange = config.getDouble("Upward.Effect.Maximum Range", 80.0D);
 		config.set("Upward.Effect.Maximum Range", maxUpEffectRange);
 
 		// max teleport effect range:
