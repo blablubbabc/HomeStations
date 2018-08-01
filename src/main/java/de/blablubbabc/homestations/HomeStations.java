@@ -493,7 +493,7 @@ public class HomeStations extends JavaPlugin implements Listener {
 				if (spawnStations.contains(currentStationLocation)) {
 					// no confirmation required if message is empty:
 					String confirmationMessage = dataStore.getMessage(Message.SpawnStationSetConfirm);
-					if (confirmation == null || !confirmation.applies(ConfirmationRequest.Type.SetStation, currentStationLocation) || confirmationMessage.isEmpty()) {
+					if (!confirmationMessage.isEmpty() && (confirmation == null || !confirmation.applies(ConfirmationRequest.Type.SetStation, currentStationLocation))) {
 						// request new confirmation:
 						confirmationRequests.put(playerId, new ConfirmationRequest(ConfirmationRequest.Type.SetStation, currentStationLocation));
 						Utils.sendMessage(player, confirmationMessage);
@@ -506,7 +506,7 @@ public class HomeStations extends JavaPlugin implements Listener {
 				} else { // home station:
 					// no confirmation required if message is empty:
 					String confirmationMessage = dataStore.getMessage(Message.HomeStationSetConfirm);
-					if (confirmation == null || !confirmation.applies(ConfirmationRequest.Type.SetStation, currentStationLocation) || confirmationMessage.isEmpty()) {
+					if (!confirmationMessage.isEmpty() && (confirmation == null || !confirmation.applies(ConfirmationRequest.Type.SetStation, currentStationLocation))) {
 						// request new confirmation:
 						confirmationRequests.put(playerId, new ConfirmationRequest(ConfirmationRequest.Type.SetStation, currentStationLocation));
 						Utils.sendMessage(player, confirmationMessage);
@@ -545,7 +545,7 @@ public class HomeStations extends JavaPlugin implements Listener {
 			String confirmationMessage = dataStore.getMessage(Message.TeleportCostsConfirm,
 					"costs", economyController.formatBalance(Math.abs(teleportCosts)),
 					"balance", economyController.formatBalance(balance));
-			if (confirmation == null || !confirmation.applies(ConfirmationRequest.Type.TeleportCost, currentStationLocation) || confirmationMessage.isEmpty()) {
+			if (!confirmationMessage.isEmpty() && (confirmation == null || !confirmation.applies(ConfirmationRequest.Type.TeleportCost, currentStationLocation))) {
 				// request new confirmation:
 				confirmationRequests.put(playerId, new ConfirmationRequest(ConfirmationRequest.Type.TeleportCost, currentStationLocation));
 				Utils.sendMessage(player, confirmationMessage);
