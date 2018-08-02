@@ -678,7 +678,7 @@ public class HomeStations extends JavaPlugin implements Listener {
 
 	public static class ConfirmationRequest {
 
-		public static final int DEFAULT_DURATION_SECONDS = 20;
+		public static final int DEFAULT_DURATION_SECONDS = 10;
 
 		public enum Type {
 			TeleportCost,
