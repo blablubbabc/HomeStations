@@ -1,5 +1,6 @@
 name: HomeStations
 main: de.blablubbabc.homestations.HomeStations
+api-version: '1.13'
 softdepend: [Vault, InSigns, TagAPI, Votifier, Multiverse-Core, My Worlds, Transporter, Multiworld]
 version: '${version}'
 authors: [${authors}]
